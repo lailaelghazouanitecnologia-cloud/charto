@@ -12,6 +12,12 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
+        "@radix-ui/react-popover": "^1.1.0",
+        "@radix-ui/react-slider": "^1.2.0",
+        "@radix-ui/react-switch": "^1.1.0",
+        "@radix-ui/react-tabs": "^1.1.0",
+        "@radix-ui/react-toggle-group": "^1.1.0",
+        "@radix-ui/react-tooltip": "^1.1.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "tailwindcss": "^4.0.0"
