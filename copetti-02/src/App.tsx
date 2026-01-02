@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Chart } from "./components/Chart.tsx";
 import { ChartControls, type ChartType } from "./components/ChartControls.tsx";
-import { Tooltip } from "./components/Tooltip.tsx";
+import { Button } from "./components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card.tsx";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./components/ui/tooltip.tsx";
 import type { Candle } from "./core/types.ts";
 
 function generateCandles(count: number, startPrice: number): Candle[] {
@@ -40,31 +47,70 @@ export default function App() {
         setCandles(generateCandles(50, 80 + Math.random() * 40));
     };
 
+    const lastCandle = candles[candles.length - 1];
+    const firstCandle = candles[0];
+    const priceChange =
+        lastCandle && firstCandle ? lastCandle.close - firstCandle.open : 0;
+    const priceChangePercent =
+        firstCandle && priceChange
+            ? ((priceChange / firstCandle.open) * 100).toFixed(2)
+            : "0.00";
+    const isPositive = priceChange >= 0;
+
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
-            <h1 className="text-2xl font-semibold text-[--color-text-muted]">
-                Copetti Charts
-            </h1>
+        <TooltipProvider>
+            <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8">
+                <h1 className="text-2xl font-semibold text-muted-foreground">
+                    Copetti Charts
+                </h1>
 
-            <ChartControls
-                chartType={chartType}
-                onChartTypeChange={setChartType}
-                zoom={zoom}
-                onZoomChange={setZoom}
-            />
+                <Card className="w-auto">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">BTC/USD</CardTitle>
+                            <span
+                                className={`text-sm font-mono ${isPositive ? "text-[--color-chart-up]" : "text-[--color-chart-down]"}`}
+                            >
+                                {isPositive ? "+" : ""}
+                                {priceChangePercent}%
+                            </span>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <ChartControls
+                            chartType={chartType}
+                            onChartTypeChange={setChartType}
+                            zoom={zoom}
+                            onZoomChange={setZoom}
+                        />
 
-            <Chart data={candles} width={800} height={400} />
+                        <div className="rounded-lg bg-[--color-chart-bg] p-2">
+                            <Chart data={candles} width={800} height={400} />
+                        </div>
 
-            <div className="flex gap-3">
-                <Tooltip content="Generate new random data">
-                    <button
-                        onClick={handleRandomize}
-                        className="px-4 py-2 bg-[--color-chart-up] text-white rounded-md hover:opacity-90 transition-opacity"
-                    >
-                        Randomize
-                    </button>
-                </Tooltip>
+                        <div className="flex justify-center gap-3">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button onClick={handleRandomize}>
+                                        Randomize Data
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Generate new random chart data
+                                </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline">Export</Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Export chart as image
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-        </div>
+        </TooltipProvider>
     );
 }

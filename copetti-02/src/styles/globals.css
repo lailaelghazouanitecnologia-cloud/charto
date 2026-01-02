@@ -1,21 +1,96 @@
 @import "tailwindcss";
 
 @theme {
+    /* shadcn dark theme colors */
+    --color-background: oklch(0.13 0.01 260);
+    --color-foreground: oklch(0.98 0 0);
+
+    --color-card: oklch(0.13 0.01 260);
+    --color-card-foreground: oklch(0.98 0 0);
+
+    --color-popover: oklch(0.13 0.01 260);
+    --color-popover-foreground: oklch(0.98 0 0);
+
+    --color-primary: oklch(0.98 0 0);
+    --color-primary-foreground: oklch(0.13 0.01 260);
+
+    --color-secondary: oklch(0.22 0.01 260);
+    --color-secondary-foreground: oklch(0.98 0 0);
+
+    --color-muted: oklch(0.22 0.01 260);
+    --color-muted-foreground: oklch(0.65 0 0);
+
+    --color-accent: oklch(0.22 0.01 260);
+    --color-accent-foreground: oklch(0.98 0 0);
+
+    --color-destructive: oklch(0.55 0.22 25);
+    --color-destructive-foreground: oklch(0.98 0 0);
+
+    --color-border: oklch(0.22 0.01 260);
+    --color-input: oklch(0.22 0.01 260);
+    --color-ring: oklch(0.55 0 0);
+
+    /* Chart specific colors */
     --color-chart-up: oklch(0.72 0.19 142);
     --color-chart-down: oklch(0.63 0.24 25);
-    --color-chart-bg: oklch(0.14 0.01 260);
-    --color-chart-grid: oklch(0.20 0.01 260);
-    --color-text-primary: oklch(0.95 0 0);
-    --color-text-muted: oklch(0.65 0 0);
+    --color-chart-bg: oklch(0.10 0.01 260);
+    --color-chart-grid: oklch(0.18 0.01 260);
+
+    /* Radius */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+}
+
+* {
+    border-color: var(--color-border);
 }
 
 body {
-    font-family: system-ui, sans-serif;
-    background-color: var(--color-chart-bg);
-    color: var(--color-text-primary);
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 canvas {
     display: block;
+}
+
+/* Focus ring */
+:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+}
+
+/* Animations */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slide-in-from-top {
+    from { transform: translateY(-0.5rem); }
+    to { transform: translateY(0); }
+}
+
+@keyframes slide-in-from-bottom {
+    from { transform: translateY(0.5rem); }
+    to { transform: translateY(0); }
+}
+
+.animate-in {
+    animation: fade-in 150ms ease-out, slide-in-from-top 150ms ease-out;
+}
+
+.animate-out {
+    animation: fade-out 150ms ease-in, slide-in-from-bottom 150ms ease-in;
 }
