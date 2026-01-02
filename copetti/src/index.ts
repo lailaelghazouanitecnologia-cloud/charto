@@ -190,3 +190,52 @@ export {
     type XAxisData,
     type YAxisData,
 } from "./core/drawers/axis.drawer.ts";
+
+export {
+    LineDrawer,
+    createLineDrawer,
+    type LineDrawerConfig,
+    type LineDrawerData,
+    type LinePoint,
+} from "./core/drawers/line.drawer.ts";
+
+export {
+    AreaDrawer,
+    createAreaDrawer,
+    type AreaDrawerConfig,
+    type AreaDrawerData,
+} from "./core/drawers/area.drawer.ts";
+
+// Core - Interaction.
+export {
+    CrossToolModel,
+    CrossToolDrawer,
+    createCrossToolModel,
+    createCrossToolDrawer,
+    type CrossToolType,
+    type MagnetTarget,
+    type CrossToolHover,
+    type CrossToolConfig,
+    type CrossToolDrawerConfig,
+    DEFAULT_CROSS_TOOL_HOVER,
+} from "./core/interaction/cross-tool.ts";
+
+export {
+    InputHandler,
+    createInputHandler,
+    MouseButton,
+    type InputHandlerConfig,
+    type PointerEventData,
+    type WheelEventData,
+    type DragState,
+    DEFAULT_DRAG_STATE,
+} from "./core/interaction/input-handler.ts";
+
+export {
+    PanHandler,
+    ZoomHandler,
+    createPanHandler,
+    createZoomHandler,
+    type PanHandlerConfig,
+    type ZoomHandlerConfig,
+} from "./core/interaction/pan-zoom-handler.ts";
