@@ -6,6 +6,9 @@ import { Canvas, createCanvas } from "./canvas.ts";
 import { createScale, type LinearScale } from "./scale.ts";
 import type { Candle, ChartConfig, Pixel, Point, ColorHex } from "./types.ts";
 import { DEFAULT_CONFIG } from "./types.ts";
+
+// Re-export types for convenience.
+export type { Candle };
 import {
     sma,
     ema,
@@ -14,6 +17,12 @@ import {
     type BollingerBands,
     INDICATOR_COLORS,
 } from "./indicators.ts";
+import {
+    DrawingManager,
+    renderDrawings,
+    type DrawingToolType,
+    type AnyDrawing,
+} from "./drawing.ts";
 
 /** Indicator configuration. */
 export interface IndicatorConfig {
@@ -48,6 +57,8 @@ export interface ChartCallbacks {
     onCrosshairMove?: (state: CrosshairState) => void;
     onCandleHover?: (candle: Candle | null, index: number) => void;
     onViewportChange?: (viewport: Viewport) => void;
+    onDrawingChange?: (drawings: readonly AnyDrawing[]) => void;
+    onDrawingSelect?: (drawing: AnyDrawing | null) => void;
 }
 
 /** Layout dimensions. */
@@ -103,6 +114,10 @@ export class ChartEngine {
     // Indicators.
     private indicators: IndicatorConfig[] = [];
     private indicatorCache: Map<string, IndicatorPoint[] | BollingerBands> = new Map();
+
+    // Drawing tools.
+    private drawingManager: DrawingManager = new DrawingManager();
+    private isDrawing = false;
 
     constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -190,18 +205,28 @@ export class ChartEngine {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (this.isDragging) {
-            this.handleDrag(x, y);
-            return;
-        }
-
-        // Update crosshair.
+        // Check if in chart area.
         const inChart =
             x >= this.layout.chart.x &&
             x <= this.layout.chart.x + this.layout.chart.width &&
             y >= this.layout.chart.y &&
             y <= this.layout.chart.y + this.layout.chart.height;
 
+        // Handle drawing in progress.
+        if (this.isDrawing && inChart) {
+            const index = this.xScale.toValue(x);
+            const price = this.yScale.toValue(y);
+            this.drawingManager.updateDrawing(index, price);
+            this.scheduleRender();
+            return;
+        }
+
+        if (this.isDragging) {
+            this.handleDrag(x, y);
+            return;
+        }
+
+        // Update crosshair.
         if (inChart) {
             const dataX = this.xScale.toValue(x);
             const candleIndex = Math.round(dataX);
@@ -236,8 +261,65 @@ export class ChartEngine {
     /** Handle mouse down. */
     private handleMouseDown(e: MouseEvent): void {
         const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Check if in chart area.
+        const inChart =
+            x >= this.layout.chart.x &&
+            x <= this.layout.chart.x + this.layout.chart.width &&
+            y >= this.layout.chart.y &&
+            y <= this.layout.chart.y + this.layout.chart.height;
+
+        // Handle drawing tool click.
+        if (inChart && this.drawingManager.getActiveTool() !== null) {
+            const index = this.xScale.toValue(x);
+            const price = this.yScale.toValue(y);
+
+            if (!this.isDrawing) {
+                // Start new drawing.
+                this.drawingManager.startDrawing(index, price);
+                this.isDrawing = true;
+                this.callbacks.onDrawingChange?.(this.drawingManager.getDrawings());
+            } else {
+                // Complete drawing.
+                this.drawingManager.finishDrawing();
+                this.isDrawing = false;
+                this.callbacks.onDrawingChange?.(this.drawingManager.getDrawings());
+            }
+            this.scheduleRender();
+            return;
+        }
+
+        // Check for drawing selection (when no tool is active).
+        if (inChart && this.drawingManager.getActiveTool() === null) {
+            const drawing = this.drawingManager.findDrawingAt(
+                x,
+                y,
+                (idx) => this.xScale.toPixel(idx),
+                (price) => this.yScale.toPixel(price),
+                this.layout.chart,
+            );
+
+            if (drawing !== null) {
+                this.drawingManager.selectDrawing(drawing.id);
+                this.callbacks.onDrawingSelect?.(drawing);
+                this.scheduleRender();
+                return;
+            } else {
+                // Deselect if clicked on empty space.
+                const wasSelected = this.drawingManager.getSelectedDrawing() !== null;
+                this.drawingManager.selectDrawing(null);
+                if (wasSelected) {
+                    this.callbacks.onDrawingSelect?.(null);
+                    this.scheduleRender();
+                }
+            }
+        }
+
+        // Normal pan behavior.
         this.isDragging = true;
-        this.dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        this.dragStart = { x, y };
         this.dragViewportStart = { ...this.viewport };
     }
 
@@ -394,6 +476,48 @@ export class ChartEngine {
     setIndicators(indicators: IndicatorConfig[]): void {
         this.indicators = indicators;
         this.recalculateIndicators();
+        this.scheduleRender();
+    }
+
+    /** Set active drawing tool. */
+    setDrawingTool(tool: DrawingToolType | null): void {
+        this.drawingManager.setActiveTool(tool);
+        this.isDrawing = false;
+        this.scheduleRender();
+    }
+
+    /** Get active drawing tool. */
+    getDrawingTool(): DrawingToolType | null {
+        return this.drawingManager.getActiveTool();
+    }
+
+    /** Get all drawings. */
+    getDrawings(): readonly AnyDrawing[] {
+        return this.drawingManager.getDrawings();
+    }
+
+    /** Delete selected drawing. */
+    deleteSelectedDrawing(): boolean {
+        const deleted = this.drawingManager.deleteSelected();
+        if (deleted) {
+            this.callbacks.onDrawingChange?.(this.drawingManager.getDrawings());
+            this.callbacks.onDrawingSelect?.(null);
+            this.scheduleRender();
+        }
+        return deleted;
+    }
+
+    /** Clear all drawings. */
+    clearAllDrawings(): void {
+        this.drawingManager.clearAll();
+        this.callbacks.onDrawingChange?.(this.drawingManager.getDrawings());
+        this.scheduleRender();
+    }
+
+    /** Cancel current drawing operation. */
+    cancelDrawing(): void {
+        this.drawingManager.cancelDrawing();
+        this.isDrawing = false;
         this.scheduleRender();
     }
 
@@ -562,6 +686,9 @@ export class ChartEngine {
 
             // Draw volume.
             this.drawVolume();
+
+            // Draw drawings (annotations).
+            this.drawDrawings();
         }
 
         // Draw axes.
@@ -572,6 +699,18 @@ export class ChartEngine {
         if (this.crosshair.visible) {
             this.drawCrosshair();
         }
+    }
+
+    /** Draw all chart drawings/annotations. */
+    private drawDrawings(): void {
+        renderDrawings(
+            this.ctx,
+            this.drawingManager.getDrawings(),
+            this.drawingManager.getActiveDrawing(),
+            (index) => this.xScale.toPixel(index),
+            (price) => this.yScale.toPixel(price),
+            this.layout.chart,
+        );
     }
 
     /** Draw grid lines. */

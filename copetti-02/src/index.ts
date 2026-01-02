@@ -15,6 +15,7 @@ export * from "./core/line.ts";
 export * from "./core/axis.ts";
 export * from "./core/crosshair.ts";
 export * from "./core/indicators.ts";
+export * from "./core/drawing.ts";
 export * from "./core/chart.ts";
 
 // UI components (shadcn-style).

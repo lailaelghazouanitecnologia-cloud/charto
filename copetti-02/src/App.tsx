@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Chart, type ChartType } from "./components/Chart.tsx";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Chart, type ChartType, type ChartRef, type DrawingToolType, type AnyDrawing } from "./components/Chart.tsx";
 import { ChartControls } from "./components/ChartControls.tsx";
 import { IndicatorControls, PRESET_INDICATORS } from "./components/IndicatorControls.tsx";
+import { DrawingControls } from "./components/DrawingControls.tsx";
 import { Button } from "./components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card.tsx";
 import {
@@ -68,10 +69,55 @@ export default function App() {
     const [chartType, setChartType] = useState<ChartType>("candlestick");
     const [zoom, setZoom] = useState(1);
     const [indicators, setIndicators] = useState<IndicatorConfig[]>(PRESET_INDICATORS);
+    const [drawingTool, setDrawingTool] = useState<DrawingToolType | null>(null);
+    const [drawings, setDrawings] = useState<readonly AnyDrawing[]>([]);
+    const [selectedDrawing, setSelectedDrawing] = useState<AnyDrawing | null>(null);
+    const chartRef = useRef<ChartRef>(null);
 
     const handleRandomize = () => {
         setCandles(generateCandles(150, 80 + Math.random() * 40));
     };
+
+    const handleDrawingChange = useCallback((newDrawings: readonly AnyDrawing[]) => {
+        setDrawings(newDrawings);
+    }, []);
+
+    const handleDrawingSelect = useCallback((drawing: AnyDrawing | null) => {
+        setSelectedDrawing(drawing);
+    }, []);
+
+    const handleDeleteSelected = useCallback(() => {
+        chartRef.current?.deleteSelectedDrawing();
+        setSelectedDrawing(null);
+    }, []);
+
+    const handleClearAll = useCallback(() => {
+        chartRef.current?.clearAllDrawings();
+        setDrawings([]);
+        setSelectedDrawing(null);
+    }, []);
+
+    // Keyboard shortcuts for drawing tools.
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape to cancel drawing or deselect.
+            if (e.key === "Escape") {
+                if (drawingTool !== null) {
+                    chartRef.current?.cancelDrawing();
+                    setDrawingTool(null);
+                } else if (selectedDrawing !== null) {
+                    setSelectedDrawing(null);
+                }
+            }
+            // Delete or Backspace to delete selected drawing.
+            if ((e.key === "Delete" || e.key === "Backspace") && selectedDrawing !== null) {
+                handleDeleteSelected();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [drawingTool, selectedDrawing, handleDeleteSelected]);
 
     const lastCandle = candles[candles.length - 1];
     const firstCandle = candles[0];
@@ -120,13 +166,25 @@ export default function App() {
                                 indicators={indicators}
                                 onIndicatorsChange={setIndicators}
                             />
+                            <DrawingControls
+                                activeTool={drawingTool}
+                                onToolChange={setDrawingTool}
+                                onClearAll={handleClearAll}
+                                onDeleteSelected={handleDeleteSelected}
+                                hasSelection={selectedDrawing !== null}
+                                drawingCount={drawings.length}
+                            />
                         </div>
 
                         <Chart
+                            ref={chartRef}
                             data={candles}
                             chartType={chartType}
                             zoom={zoom}
                             indicators={indicators}
+                            drawingTool={drawingTool}
+                            onDrawingChange={handleDrawingChange}
+                            onDrawingSelect={handleDrawingSelect}
                             width={850}
                             height={450}
                         />

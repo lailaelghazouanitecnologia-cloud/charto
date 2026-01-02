@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import {
     createChart,
     type ChartEngine,
@@ -7,6 +7,7 @@ import {
     type CrosshairState,
     type IndicatorConfig,
 } from "../core/chart.ts";
+import type { DrawingToolType, AnyDrawing } from "../core/drawing.ts";
 import { cn } from "../lib/utils.ts";
 
 interface ChartProps {
@@ -14,26 +15,47 @@ interface ChartProps {
     chartType?: ChartType;
     zoom?: number;
     indicators?: IndicatorConfig[];
+    drawingTool?: DrawingToolType | null;
     width?: number;
     height?: number;
     className?: string;
     onCandleHover?: (candle: Candle | null) => void;
+    onDrawingChange?: (drawings: readonly AnyDrawing[]) => void;
+    onDrawingSelect?: (drawing: AnyDrawing | null) => void;
 }
 
-export function Chart({
+export interface ChartRef {
+    deleteSelectedDrawing: () => boolean;
+    clearAllDrawings: () => void;
+    cancelDrawing: () => void;
+    getDrawings: () => readonly AnyDrawing[];
+}
+
+export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
     data,
     chartType = "candlestick",
     zoom = 1,
     indicators = [],
+    drawingTool = null,
     width = 800,
     height = 450,
     className,
     onCandleHover,
-}: ChartProps) {
+    onDrawingChange,
+    onDrawingSelect,
+}, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartEngine | null>(null);
     const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
     const [crosshair, setCrosshair] = useState<CrosshairState | null>(null);
+
+    // Expose methods via ref.
+    useImperativeHandle(ref, () => ({
+        deleteSelectedDrawing: () => chartRef.current?.deleteSelectedDrawing() ?? false,
+        clearAllDrawings: () => chartRef.current?.clearAllDrawings(),
+        cancelDrawing: () => chartRef.current?.cancelDrawing(),
+        getDrawings: () => chartRef.current?.getDrawings() ?? [],
+    }), []);
 
     // Initialize chart.
     useEffect(() => {
@@ -56,6 +78,12 @@ export function Chart({
             onCrosshairMove: (state) => {
                 setCrosshair(state);
             },
+            onDrawingChange: (drawings) => {
+                onDrawingChange?.(drawings);
+            },
+            onDrawingSelect: (drawing) => {
+                onDrawingSelect?.(drawing);
+            },
         });
 
         chartRef.current = chart;
@@ -64,7 +92,7 @@ export function Chart({
             chart.destroy();
             chartRef.current = null;
         };
-    }, [width, height, onCandleHover]);
+    }, [width, height, onCandleHover, onDrawingChange, onDrawingSelect]);
 
     // Update data.
     useEffect(() => {
@@ -93,6 +121,13 @@ export function Chart({
             chartRef.current.setIndicators(indicators);
         }
     }, [indicators]);
+
+    // Update drawing tool.
+    useEffect(() => {
+        if (chartRef.current !== null) {
+            chartRef.current.setDrawingTool(drawingTool);
+        }
+    }, [drawingTool]);
 
     // Format price display.
     const formatPrice = (price: number) => price.toFixed(2);
@@ -181,11 +216,11 @@ export function Chart({
 
             {/* Instructions */}
             <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/50">
-                Scroll to zoom • Drag to pan
+                {drawingTool !== null ? "Click to draw • Esc to cancel" : "Scroll to zoom • Drag to pan"}
             </div>
         </div>
     );
-}
+});
 
 // Re-export types for convenience.
-export type { ChartType, Candle, CrosshairState };
+export type { ChartType, Candle, CrosshairState, DrawingToolType, AnyDrawing };
