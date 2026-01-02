@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-/* CSS custom properties for chart-specific design tokens. */
+/*
+ * CSS custom properties for chart-specific design tokens.
+ * These are defined outside @layer to avoid Tailwind v4 conflicts.
+ */
 :root {
     /* Colors - Chart specific. */
     --color-chart-up: oklch(0.72 0.19 142);
@@ -49,210 +52,204 @@
     --color-card-hover: oklch(0.22 0.01 260);
 }
 
-/* Base layer styles. */
-@layer base {
-    *,
-    *::before,
-    *::after {
-        box-sizing: border-box;
-    }
+/* Base styles - no @layer wrapper for Tailwind v4 compatibility */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
-    html {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
 
-    body {
-        font-family: var(--font-family-sans);
-        background-color: var(--color-chart-background);
-        color: var(--color-canvas-primary);
-        margin: 0;
-        padding: 0;
-    }
+body {
+    font-family: var(--font-family-sans);
+    background-color: var(--color-chart-background);
+    color: var(--color-canvas-primary);
+    margin: 0;
+    padding: 0;
+}
 
-    /* Canvas reset for chart rendering. */
-    canvas {
-        display: block;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
+canvas {
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* Component styles */
+.chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    background-color: var(--color-chart-background);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.chart-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.chart-axis-x {
+    height: 20px;
+    font-family: var(--font-family-mono);
+    font-size: 0.75rem;
+    color: var(--color-chart-axis);
+}
+
+.chart-axis-y {
+    width: 60px;
+    font-family: var(--font-family-mono);
+    font-size: 0.75rem;
+    color: var(--color-chart-axis);
+}
+
+/* Card stack component */
+.card-stack {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    overflow: hidden;
+}
+
+.card-stack-item {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 324px;
+    height: 280px;
+    background-color: var(--color-card-bg);
+    border: 1px solid var(--color-card-border);
+    border-bottom: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--spacing-xs);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    will-change: transform;
+}
+
+@media (min-width: 640px) {
+    .card-stack-item {
+        width: 512px;
     }
 }
 
-/* Component layer styles. */
-@layer components {
-    .chart-container {
-        position: relative;
-        width: 100%;
-        min-height: 200px;
-        background-color: var(--color-chart-background);
-        border-radius: var(--radius-md);
-        overflow: hidden;
-    }
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    height: 100%;
+    width: 100%;
+}
 
-    .chart-canvas {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-    }
+.card-image {
+    width: 100%;
+    height: 200px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    outline: 1px solid oklch(1 0 0 / 0.1);
+    outline-offset: -1px;
+}
 
-    .chart-axis-x {
-        height: 20px;
-        font-family: var(--font-family-mono);
-        font-size: 0.75rem;
-        color: var(--color-chart-axis);
-    }
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    user-select: none;
+}
 
-    .chart-axis-y {
-        width: 60px;
-        font-family: var(--font-family-mono);
-        font-size: 0.75rem;
-        color: var(--color-chart-axis);
-    }
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-sm) var(--spacing-lg);
+}
 
-    /* Card stack component. */
-    .card-stack {
-        position: relative;
-        width: 100%;
-        height: 380px;
-        overflow: hidden;
-    }
+.card-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
 
-    .card-stack-item {
-        position: absolute;
-        left: 50%;
-        bottom: 0;
-        transform: translateX(-50%);
-        width: 324px;
-        height: 280px;
-        background-color: var(--color-card-bg);
-        border: 1px solid var(--color-card-border);
-        border-bottom: none;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-        padding: var(--spacing-xs);
-        box-shadow: var(--shadow-lg);
-        overflow: hidden;
-        will-change: transform;
-    }
+.card-title {
+    font-weight: 500;
+    color: var(--color-canvas-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-    @media (min-width: 640px) {
-        .card-stack-item {
-            width: 512px;
-        }
-    }
+.card-description {
+    color: var(--color-canvas-muted);
+    font-size: 0.875rem;
+}
 
-    .card-content {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
-        height: 100%;
-        width: 100%;
-    }
+.card-button {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 40px;
+    padding: 0 12px 0 16px;
+    background-color: var(--color-canvas-primary);
+    color: var(--color-chart-background);
+    border: none;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
 
-    .card-image {
-        width: 100%;
-        height: 200px;
-        border-radius: var(--radius-lg);
-        overflow: hidden;
-        outline: 1px solid oklch(1 0 0 / 0.1);
-        outline-offset: -1px;
-    }
+.card-button:hover {
+    opacity: 0.9;
+}
 
-    .card-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        user-select: none;
-    }
+.card-button:active {
+    transform: scale(0.98);
+}
 
-    .card-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-sm);
-        padding: 0 var(--spacing-sm) var(--spacing-lg);
-    }
+.card-stack-controls {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--color-card-border);
+    margin-top: -1px;
+}
 
-    .card-info {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        flex: 1;
-    }
+.animate-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 36px;
+    padding: 0 12px;
+    background-color: var(--color-card-bg);
+    color: var(--color-canvas-secondary);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+}
 
-    .card-title {
-        font-weight: 500;
-        color: var(--color-canvas-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.animate-button:hover {
+    background-color: var(--color-card-hover);
+}
 
-    .card-description {
-        color: var(--color-canvas-muted);
-        font-size: 0.875rem;
-    }
-
-    .card-button {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        height: 40px;
-        padding: 0 12px 0 16px;
-        background-color: var(--color-canvas-primary);
-        color: var(--color-chart-background);
-        border: none;
-        border-radius: 9999px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        user-select: none;
-        flex-shrink: 0;
-        transition: opacity 0.15s;
-    }
-
-    .card-button:hover {
-        opacity: 0.9;
-    }
-
-    .card-button:active {
-        transform: scale(0.98);
-    }
-
-    /* Animate button container. */
-    .card-stack-controls {
-        position: relative;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: var(--spacing-md);
-        border-top: 1px solid var(--color-card-border);
-        margin-top: -1px;
-    }
-
-    .animate-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        height: 36px;
-        padding: 0 12px;
-        background-color: var(--color-card-bg);
-        color: var(--color-canvas-secondary);
-        border: 1px solid var(--color-card-border);
-        border-radius: var(--radius-md);
-        font-weight: 500;
-        cursor: pointer;
-        user-select: none;
-        transition: background-color 0.15s;
-    }
-
-    .animate-button:hover {
-        background-color: var(--color-card-hover);
-    }
-
-    .animate-button:active {
-        transform: scale(0.98);
-    }
+.animate-button:active {
+    transform: scale(0.98);
 }
