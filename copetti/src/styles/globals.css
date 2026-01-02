@@ -17,26 +17,13 @@
     --color-canvas-muted: oklch(0.65 0 0);
 
     /* Font families. */
-    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-    --font-sans: "Inter", system-ui, sans-serif;
-
-    /* Spacing scale for charts. */
-    --spacing-chart-xs: 2px;
-    --spacing-chart-sm: 4px;
-    --spacing-chart-md: 8px;
-    --spacing-chart-lg: 16px;
-    --spacing-chart-xl: 24px;
+    --font-family-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    --font-family-sans: "Inter", system-ui, sans-serif;
 
     /* Animation durations. */
-    --duration-fast: 150ms;
-    --duration-normal: 300ms;
-    --duration-slow: 500ms;
-
-    /* Chart specific sizing. */
-    --chart-min-height: 200px;
-    --chart-default-height: 400px;
-    --axis-label-height: 20px;
-    --axis-label-width: 60px;
+    --animate-duration-fast: 150ms;
+    --animate-duration-normal: 300ms;
+    --animate-duration-slow: 500ms;
 }
 
 /* Base layer styles. */
@@ -53,7 +40,7 @@
     }
 
     body {
-        font-family: var(--font-sans);
+        font-family: var(--font-family-sans);
         background-color: var(--color-chart-background);
         color: var(--color-canvas-primary);
     }
@@ -71,7 +58,7 @@
     .chart-container {
         position: relative;
         width: 100%;
-        min-height: var(--chart-min-height);
+        min-height: 200px;
         background-color: var(--color-chart-background);
         border-radius: 0.5rem;
         overflow: hidden;
@@ -85,43 +72,16 @@
     }
 
     .chart-axis-x {
-        height: var(--axis-label-height);
-        font-family: var(--font-mono);
+        height: 20px;
+        font-family: var(--font-family-mono);
         font-size: 0.75rem;
         color: var(--color-chart-axis);
     }
 
     .chart-axis-y {
-        width: var(--axis-label-width);
-        font-family: var(--font-mono);
+        width: 60px;
+        font-family: var(--font-family-mono);
         font-size: 0.75rem;
         color: var(--color-chart-axis);
-    }
-}
-
-/* Utility layer for chart-specific utilities. */
-@layer utilities {
-    .text-chart-up {
-        color: var(--color-chart-up);
-    }
-
-    .text-chart-down {
-        color: var(--color-chart-down);
-    }
-
-    .text-chart-neutral {
-        color: var(--color-chart-neutral);
-    }
-
-    .bg-chart-up {
-        background-color: var(--color-chart-up);
-    }
-
-    .bg-chart-down {
-        background-color: var(--color-chart-down);
-    }
-
-    .font-mono-chart {
-        font-family: var(--font-mono);
     }
 }
