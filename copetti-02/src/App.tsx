@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Chart } from "./components/Chart.tsx";
-import { ChartControls, type ChartType } from "./components/ChartControls.tsx";
+import { Chart, type ChartType } from "./components/Chart.tsx";
+import { ChartControls } from "./components/ChartControls.tsx";
 import { Button } from "./components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card.tsx";
 import {
@@ -16,12 +16,30 @@ function generateCandles(count: number, startPrice: number): Candle[] {
     let price = startPrice;
     const now = Date.now();
 
+    // Add some trend and volatility.
+    let trend = Math.random() > 0.5 ? 1 : -1;
+    let volatility = 2 + Math.random() * 3;
+
     for (let i = 0; i < count; i++) {
-        const change = (Math.random() - 0.5) * 10;
+        // Occasionally change trend.
+        if (Math.random() < 0.1) {
+            trend *= -1;
+        }
+
+        // Random walk with trend.
+        const change = (Math.random() - 0.45) * volatility + trend * 0.3;
         const open = price;
         const close = price + change;
-        const high = Math.max(open, close) + Math.random() * 5;
-        const low = Math.min(open, close) - Math.random() * 5;
+
+        // High/low with wicks.
+        const wickUp = Math.random() * volatility * 0.5;
+        const wickDown = Math.random() * volatility * 0.5;
+        const high = Math.max(open, close) + wickUp;
+        const low = Math.min(open, close) - wickDown;
+
+        // Volume correlates with price movement.
+        const volumeBase = 5000 + Math.random() * 10000;
+        const volumeSpike = Math.abs(change) > volatility ? 2 : 1;
 
         candles.push({
             timestamp: now + i * 60000,
@@ -29,22 +47,27 @@ function generateCandles(count: number, startPrice: number): Candle[] {
             high,
             low,
             close,
-            volume: Math.floor(Math.random() * 10000),
+            volume: Math.floor(volumeBase * volumeSpike),
         });
 
         price = close;
+
+        // Adjust volatility occasionally.
+        if (Math.random() < 0.05) {
+            volatility = 2 + Math.random() * 4;
+        }
     }
 
     return candles;
 }
 
 export default function App() {
-    const [candles, setCandles] = useState(() => generateCandles(50, 100));
+    const [candles, setCandles] = useState(() => generateCandles(150, 100));
     const [chartType, setChartType] = useState<ChartType>("candlestick");
     const [zoom, setZoom] = useState(1);
 
     const handleRandomize = () => {
-        setCandles(generateCandles(50, 80 + Math.random() * 40));
+        setCandles(generateCandles(150, 80 + Math.random() * 40));
     };
 
     const lastCandle = candles[candles.length - 1];
@@ -56,6 +79,7 @@ export default function App() {
             ? ((priceChange / firstCandle.open) * 100).toFixed(2)
             : "0.00";
     const isPositive = priceChange >= 0;
+    const currentPrice = lastCandle?.close ?? 0;
 
     return (
         <TooltipProvider>
@@ -66,10 +90,15 @@ export default function App() {
 
                 <Card className="w-auto">
                     <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">BTC/USD</CardTitle>
+                        <div className="flex items-center justify-between gap-8">
+                            <div className="flex items-center gap-3">
+                                <CardTitle className="text-lg">BTC/USD</CardTitle>
+                                <span className="text-2xl font-mono font-semibold">
+                                    ${currentPrice.toFixed(2)}
+                                </span>
+                            </div>
                             <span
-                                className={`text-sm font-mono ${isPositive ? "text-[--color-chart-up]" : "text-[--color-chart-down]"}`}
+                                className={`text-sm font-mono ${isPositive ? "text-[#22c55e]" : "text-[#ef4444]"}`}
                             >
                                 {isPositive ? "+" : ""}
                                 {priceChangePercent}%
@@ -84,9 +113,13 @@ export default function App() {
                             onZoomChange={setZoom}
                         />
 
-                        <div className="rounded-lg bg-[--color-chart-bg] p-2">
-                            <Chart data={candles} width={800} height={400} />
-                        </div>
+                        <Chart
+                            data={candles}
+                            chartType={chartType}
+                            zoom={zoom}
+                            width={850}
+                            height={450}
+                        />
 
                         <div className="flex justify-center gap-3">
                             <Tooltip>

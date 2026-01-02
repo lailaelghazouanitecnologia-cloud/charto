@@ -7,8 +7,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "./ui/index.ts";
-
-export type ChartType = "candlestick" | "line" | "area";
+import type { ChartType } from "../core/chart.ts";
 
 interface ChartControlsProps {
     chartType: ChartType;
