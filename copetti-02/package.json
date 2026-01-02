@@ -1,0 +1,20 @@
+{
+    "name": "@copetti/charts",
+    "version": "0.1.0",
+    "description": "Minimal TypeScript charting library",
+    "type": "module",
+    "private": true,
+    "main": "src/index.ts",
+    "scripts": {
+        "dev": "bun --hot src/server.ts",
+        "build": "bun build src/index.ts --outdir dist",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "bun": ">=1.0.0"
+    }
+}
