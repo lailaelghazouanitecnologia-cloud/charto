@@ -521,6 +521,39 @@ export class ChartEngine {
         this.scheduleRender();
     }
 
+    /** Set visible range by candle indices. */
+    setVisibleRange(startIndex: number, endIndex: number): void {
+        this.viewport.startIndex = Math.max(0, startIndex);
+        this.viewport.endIndex = Math.min(this.candles.length - 1, endIndex);
+        this.updatePriceRange();
+        this.updateScales();
+        this.callbacks.onViewportChange?.(this.viewport);
+        this.scheduleRender();
+    }
+
+    /** Get current viewport. */
+    getViewport(): Viewport {
+        return { ...this.viewport };
+    }
+
+    /** Export chart as PNG data URL. */
+    exportToPNG(): string {
+        // Force a render to ensure the latest state.
+        this.render();
+        return this.canvas.getElement().toDataURL("image/png");
+    }
+
+    /** Export chart as PNG and download. */
+    downloadPNG(filename: string = "chart.png"): void {
+        const dataUrl = this.exportToPNG();
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     /** Recalculate all indicators. */
     private recalculateIndicators(): void {
         this.indicatorCache.clear();

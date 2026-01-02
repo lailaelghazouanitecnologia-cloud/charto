@@ -29,6 +29,9 @@ export interface ChartRef {
     clearAllDrawings: () => void;
     cancelDrawing: () => void;
     getDrawings: () => readonly AnyDrawing[];
+    setVisibleRange: (start: number, end: number) => void;
+    exportToPNG: () => string;
+    downloadPNG: (filename?: string) => void;
 }
 
 export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
@@ -55,6 +58,9 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
         clearAllDrawings: () => chartRef.current?.clearAllDrawings(),
         cancelDrawing: () => chartRef.current?.cancelDrawing(),
         getDrawings: () => chartRef.current?.getDrawings() ?? [],
+        setVisibleRange: (start: number, end: number) => chartRef.current?.setVisibleRange(start, end),
+        exportToPNG: () => chartRef.current?.exportToPNG() ?? "",
+        downloadPNG: (filename?: string) => chartRef.current?.downloadPNG(filename),
     }), []);
 
     // Initialize chart.

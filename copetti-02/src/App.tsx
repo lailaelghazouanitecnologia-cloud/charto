@@ -3,6 +3,7 @@ import { Chart, type ChartType, type ChartRef, type DrawingToolType, type AnyDra
 import { ChartControls } from "./components/ChartControls.tsx";
 import { IndicatorControls, PRESET_INDICATORS } from "./components/IndicatorControls.tsx";
 import { DrawingControls } from "./components/DrawingControls.tsx";
+import { TimeRangeSelector, TIME_RANGES, type TimeRange, calculateVisibleRange } from "./components/TimeRangeSelector.tsx";
 import { Button } from "./components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card.tsx";
 import {
@@ -72,11 +73,23 @@ export default function App() {
     const [drawingTool, setDrawingTool] = useState<DrawingToolType | null>(null);
     const [drawings, setDrawings] = useState<readonly AnyDrawing[]>([]);
     const [selectedDrawing, setSelectedDrawing] = useState<AnyDrawing | null>(null);
+    const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[2]!); // Default to 1D
     const chartRef = useRef<ChartRef>(null);
 
     const handleRandomize = () => {
         setCandles(generateCandles(150, 80 + Math.random() * 40));
     };
+
+    const handleTimeRangeChange = useCallback((range: TimeRange) => {
+        setTimeRange(range);
+        const { start, end } = calculateVisibleRange(range, candles.length);
+        chartRef.current?.setVisibleRange(start, end);
+    }, [candles.length]);
+
+    const handleExport = useCallback(() => {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        chartRef.current?.downloadPNG(`chart-${timestamp}.png`);
+    }, []);
 
     const handleDrawingChange = useCallback((newDrawings: readonly AnyDrawing[]) => {
         setDrawings(newDrawings);
@@ -174,6 +187,11 @@ export default function App() {
                                 hasSelection={selectedDrawing !== null}
                                 drawingCount={drawings.length}
                             />
+                            <div className="h-6 w-px bg-border" />
+                            <TimeRangeSelector
+                                value={timeRange.value}
+                                onChange={handleTimeRangeChange}
+                            />
                         </div>
 
                         <Chart
@@ -202,10 +220,12 @@ export default function App() {
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="outline">Export</Button>
+                                    <Button variant="outline" onClick={handleExport}>
+                                        Export
+                                    </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    Export chart as image
+                                    Export chart as PNG image
                                 </TooltipContent>
                             </Tooltip>
                         </div>
