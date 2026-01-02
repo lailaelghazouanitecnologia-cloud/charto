@@ -1,18 +1,29 @@
 {
     "name": "@copetti/charts",
     "version": "0.1.0",
-    "description": "Minimal TypeScript charting library",
+    "description": "TypeScript charting library with React and Tailwind CSS 4",
     "type": "module",
     "private": true,
     "main": "src/index.ts",
     "scripts": {
-        "dev": "bun --hot src/server.ts",
-        "build": "bun build src/index.ts --outdir dist",
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
         "typecheck": "tsc --noEmit"
     },
+    "dependencies": {
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tailwindcss": "^4.0.0"
+    },
     "devDependencies": {
+        "@tailwindcss/vite": "^4.0.0",
         "@types/bun": "latest",
-        "typescript": "^5.9.3"
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@vitejs/plugin-react": "^4.3.0",
+        "typescript": "^5.9.3",
+        "vite": "^6.0.0"
     },
     "engines": {
         "bun": ">=1.0.0"

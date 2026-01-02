@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+    --color-chart-up: oklch(0.72 0.19 142);
+    --color-chart-down: oklch(0.63 0.24 25);
+    --color-chart-bg: oklch(0.14 0.01 260);
+    --color-chart-grid: oklch(0.20 0.01 260);
+    --color-text-primary: oklch(0.95 0 0);
+    --color-text-muted: oklch(0.65 0 0);
+}
+
+body {
+    font-family: system-ui, sans-serif;
+    background-color: var(--color-chart-bg);
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+canvas {
+    display: block;
+}
