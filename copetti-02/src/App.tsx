@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Chart, type ChartType } from "./components/Chart.tsx";
 import { ChartControls } from "./components/ChartControls.tsx";
+import { IndicatorControls, PRESET_INDICATORS } from "./components/IndicatorControls.tsx";
 import { Button } from "./components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card.tsx";
 import {
@@ -10,6 +11,7 @@ import {
     TooltipTrigger,
 } from "./components/ui/tooltip.tsx";
 import type { Candle } from "./core/types.ts";
+import type { IndicatorConfig } from "./core/chart.ts";
 
 function generateCandles(count: number, startPrice: number): Candle[] {
     const candles: Candle[] = [];
@@ -65,6 +67,7 @@ export default function App() {
     const [candles, setCandles] = useState(() => generateCandles(150, 100));
     const [chartType, setChartType] = useState<ChartType>("candlestick");
     const [zoom, setZoom] = useState(1);
+    const [indicators, setIndicators] = useState<IndicatorConfig[]>(PRESET_INDICATORS);
 
     const handleRandomize = () => {
         setCandles(generateCandles(150, 80 + Math.random() * 40));
@@ -106,17 +109,24 @@ export default function App() {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <ChartControls
-                            chartType={chartType}
-                            onChartTypeChange={setChartType}
-                            zoom={zoom}
-                            onZoomChange={setZoom}
-                        />
+                        <div className="flex items-center gap-3">
+                            <ChartControls
+                                chartType={chartType}
+                                onChartTypeChange={setChartType}
+                                zoom={zoom}
+                                onZoomChange={setZoom}
+                            />
+                            <IndicatorControls
+                                indicators={indicators}
+                                onIndicatorsChange={setIndicators}
+                            />
+                        </div>
 
                         <Chart
                             data={candles}
                             chartType={chartType}
                             zoom={zoom}
+                            indicators={indicators}
                             width={850}
                             height={450}
                         />

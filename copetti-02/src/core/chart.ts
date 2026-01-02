@@ -6,6 +6,22 @@ import { Canvas, createCanvas } from "./canvas.ts";
 import { createScale, type LinearScale } from "./scale.ts";
 import type { Candle, ChartConfig, Pixel, Point, ColorHex } from "./types.ts";
 import { DEFAULT_CONFIG } from "./types.ts";
+import {
+    sma,
+    ema,
+    bollingerBands,
+    type IndicatorPoint,
+    type BollingerBands,
+    INDICATOR_COLORS,
+} from "./indicators.ts";
+
+/** Indicator configuration. */
+export interface IndicatorConfig {
+    type: "sma" | "ema" | "bollinger";
+    period: number;
+    color: ColorHex;
+    enabled: boolean;
+}
 
 /** Chart display type. */
 export type ChartType = "candlestick" | "line" | "area";
@@ -83,6 +99,10 @@ export class ChartEngine {
 
     // Animation.
     private animationFrame: number | null = null;
+
+    // Indicators.
+    private indicators: IndicatorConfig[] = [];
+    private indicatorCache: Map<string, IndicatorPoint[] | BollingerBands> = new Map();
 
     constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -341,6 +361,7 @@ export class ChartEngine {
 
         this.updatePriceRange();
         this.updateScales();
+        this.recalculateIndicators();
         this.scheduleRender();
     }
 
@@ -369,6 +390,148 @@ export class ChartEngine {
         this.callbacks = callbacks;
     }
 
+    /** Set indicators. */
+    setIndicators(indicators: IndicatorConfig[]): void {
+        this.indicators = indicators;
+        this.recalculateIndicators();
+        this.scheduleRender();
+    }
+
+    /** Recalculate all indicators. */
+    private recalculateIndicators(): void {
+        this.indicatorCache.clear();
+
+        for (const indicator of this.indicators) {
+            if (!indicator.enabled) continue;
+
+            const key = `${indicator.type}-${indicator.period}`;
+
+            switch (indicator.type) {
+                case "sma":
+                    this.indicatorCache.set(key, sma(this.candles, indicator.period));
+                    break;
+                case "ema":
+                    this.indicatorCache.set(key, ema(this.candles, indicator.period));
+                    break;
+                case "bollinger":
+                    this.indicatorCache.set(key, bollingerBands(this.candles, indicator.period));
+                    break;
+            }
+        }
+    }
+
+    /** Draw all enabled indicators. */
+    private drawIndicators(): void {
+        const { ctx } = this;
+
+        for (const indicator of this.indicators) {
+            if (!indicator.enabled) continue;
+
+            const key = `${indicator.type}-${indicator.period}`;
+            const data = this.indicatorCache.get(key);
+
+            if (data === undefined) continue;
+
+            if (indicator.type === "bollinger") {
+                const bb = data as BollingerBands;
+                this.drawIndicatorLine(bb.upper, INDICATOR_COLORS.bollingerUpper, 1, true);
+                this.drawIndicatorLine(bb.middle, INDICATOR_COLORS.bollingerMiddle, 1);
+                this.drawIndicatorLine(bb.lower, INDICATOR_COLORS.bollingerLower, 1, true);
+
+                // Fill between bands.
+                this.drawBollingerFill(bb);
+            } else {
+                const points = data as IndicatorPoint[];
+                this.drawIndicatorLine(points, indicator.color, 1.5);
+            }
+        }
+    }
+
+    /** Draw a single indicator line. */
+    private drawIndicatorLine(
+        points: IndicatorPoint[],
+        color: ColorHex,
+        lineWidth: number,
+        dashed: boolean = false,
+    ): void {
+        if (points.length < 2) return;
+
+        const { ctx } = this;
+        const start = Math.floor(this.viewport.startIndex);
+        const end = Math.ceil(this.viewport.endIndex);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        if (dashed) {
+            ctx.setLineDash([4, 4]);
+        }
+
+        ctx.beginPath();
+        let first = true;
+
+        for (const point of points) {
+            if (point.index < start || point.index > end) continue;
+
+            const x = this.xScale.toPixel(point.index);
+            const y = this.yScale.toPixel(point.value);
+
+            if (first) {
+                ctx.moveTo(x, y);
+                first = false;
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    /** Draw Bollinger Bands fill. */
+    private drawBollingerFill(bb: BollingerBands): void {
+        if (bb.upper.length < 2) return;
+
+        const { ctx } = this;
+        const { chart } = this.layout;
+        const start = Math.floor(this.viewport.startIndex);
+        const end = Math.ceil(this.viewport.endIndex);
+
+        ctx.beginPath();
+
+        // Draw upper line forward.
+        let first = true;
+        for (const point of bb.upper) {
+            if (point.index < start || point.index > end) continue;
+
+            const x = this.xScale.toPixel(point.index);
+            const y = this.yScale.toPixel(point.value);
+
+            if (first) {
+                ctx.moveTo(x, y);
+                first = false;
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+
+        // Draw lower line backward.
+        for (let i = bb.lower.length - 1; i >= 0; i--) {
+            const point = bb.lower[i];
+            if (point === undefined || point.index < start || point.index > end) continue;
+
+            const x = this.xScale.toPixel(point.index);
+            const y = this.yScale.toPixel(point.value);
+            ctx.lineTo(x, y);
+        }
+
+        ctx.closePath();
+        ctx.fillStyle = "rgba(96, 165, 250, 0.1)";
+        ctx.fill();
+    }
+
     /** Main render function. */
     render(): void {
         const { ctx } = this;
@@ -393,6 +556,9 @@ export class ChartEngine {
                     this.drawAreaChart();
                     break;
             }
+
+            // Draw indicators.
+            this.drawIndicators();
 
             // Draw volume.
             this.drawVolume();

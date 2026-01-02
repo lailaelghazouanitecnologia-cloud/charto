@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     createChart,
     type ChartEngine,
     type ChartType,
     type Candle,
     type CrosshairState,
+    type IndicatorConfig,
 } from "../core/chart.ts";
 import { cn } from "../lib/utils.ts";
 
@@ -12,6 +13,7 @@ interface ChartProps {
     data: Candle[];
     chartType?: ChartType;
     zoom?: number;
+    indicators?: IndicatorConfig[];
     width?: number;
     height?: number;
     className?: string;
@@ -22,6 +24,7 @@ export function Chart({
     data,
     chartType = "candlestick",
     zoom = 1,
+    indicators = [],
     width = 800,
     height = 450,
     className,
@@ -83,6 +86,13 @@ export function Chart({
             chartRef.current.setZoom(zoom);
         }
     }, [zoom]);
+
+    // Update indicators.
+    useEffect(() => {
+        if (chartRef.current !== null) {
+            chartRef.current.setIndicators(indicators);
+        }
+    }, [indicators]);
 
     // Format price display.
     const formatPrice = (price: number) => price.toFixed(2);
