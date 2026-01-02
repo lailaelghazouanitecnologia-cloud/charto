@@ -100,3 +100,93 @@ export {
     calculateBoundsIntersection,
     haveBoundsChanged,
 } from "./types/bounds.ts";
+
+// Core - Viewable.
+export {
+    type Viewable,
+    type VisualPoint,
+    createVisualPoint,
+    visualPointToPixel,
+} from "./core/model/viewable.ts";
+
+// Core - Visual Candle.
+export {
+    type VisualCandle,
+    type VisualCandleConfig,
+    type Rect,
+    createVisualCandle,
+    getCandleXCenter,
+    getCandleXStart,
+    getCandleXEnd,
+    getCandleWidthPixels,
+    getCandleYHigh,
+    getCandleYLow,
+    getCandleYOpen,
+    getCandleYClose,
+    getCandleBodyTop,
+    getCandleBodyBottom,
+    getCandleBodyHeight,
+    getCandleWickHeight,
+    getCandleBodyRect,
+    getCandleWickRect,
+    getCandleYKeyPoints,
+    isPixelInCandleX,
+    isPixelInCandleBody,
+    isPixelInCandleFull,
+} from "./core/model/visual-candle.ts";
+
+// Core - Candle Series.
+export {
+    CandleSeriesModel,
+    createCandleSeriesModel,
+    calculateHighLow,
+    type HighLow,
+    type ViewportRange,
+    type CandleSeriesConfig,
+    DEFAULT_HIGH_LOW,
+} from "./core/model/candle-series.ts";
+
+// Core - Drawers.
+export {
+    type Drawer,
+    type DrawerConfig,
+    type DrawingContext,
+    BaseDrawer,
+    createDrawingContext,
+} from "./core/drawers/drawer.ts";
+
+export {
+    DrawingManager,
+    createDrawingManager,
+    type DrawingManagerConfig,
+} from "./core/drawers/drawing-manager.ts";
+
+export {
+    CandleDrawer,
+    createCandleDrawer,
+    type CandleDrawerConfig,
+    type CandleDrawerData,
+    type CandleTheme,
+    DEFAULT_CANDLE_THEME,
+} from "./core/drawers/candle.drawer.ts";
+
+export {
+    GridDrawer,
+    createGridDrawer,
+    type GridDrawerConfig,
+    type GridLines,
+} from "./core/drawers/grid.drawer.ts";
+
+export {
+    XAxisDrawer,
+    YAxisDrawer,
+    createXAxisDrawer,
+    createYAxisDrawer,
+    generateAxisLabels,
+    type AxisLabel,
+    type AxisDrawerConfig,
+    type XAxisDrawerConfig,
+    type YAxisDrawerConfig,
+    type XAxisData,
+    type YAxisData,
+} from "./core/drawers/axis.drawer.ts";
