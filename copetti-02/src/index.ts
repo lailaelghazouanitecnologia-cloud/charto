@@ -23,6 +23,7 @@ export * from "./core/measure.ts";
 export * from "./core/touch.ts";
 export * from "./core/animation.ts";
 export * from "./core/chart-types.ts";
+export * from "./core/pane.ts";
 
 // UI components (shadcn-style).
 export * from "./components/ui/index.ts";
