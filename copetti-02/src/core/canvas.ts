@@ -30,7 +30,8 @@ export class Canvas {
         this.element.height = height * this.dpr;
         this.element.style.width = `${width}px`;
         this.element.style.height = `${height}px`;
-        this.ctx.scale(this.dpr, this.dpr);
+        // Reset transform and apply DPR scale (setting width/height resets the context).
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     }
 
     /** Clears the entire canvas. */

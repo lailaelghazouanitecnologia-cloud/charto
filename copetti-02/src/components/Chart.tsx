@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from "react";
 import {
     createChart,
     type ChartEngine,
@@ -52,6 +52,24 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
     const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
     const [crosshair, setCrosshair] = useState<CrosshairState | null>(null);
 
+    // Store callbacks in refs to avoid recreating the chart when they change.
+    const onCandleHoverRef = useRef(onCandleHover);
+    const onDrawingChangeRef = useRef(onDrawingChange);
+    const onDrawingSelectRef = useRef(onDrawingSelect);
+
+    // Keep refs in sync with latest callbacks.
+    useEffect(() => {
+        onCandleHoverRef.current = onCandleHover;
+    }, [onCandleHover]);
+
+    useEffect(() => {
+        onDrawingChangeRef.current = onDrawingChange;
+    }, [onDrawingChange]);
+
+    useEffect(() => {
+        onDrawingSelectRef.current = onDrawingSelect;
+    }, [onDrawingSelect]);
+
     // Expose methods via ref.
     useImperativeHandle(ref, () => ({
         deleteSelectedDrawing: () => chartRef.current?.deleteSelectedDrawing() ?? false,
@@ -63,7 +81,7 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
         downloadPNG: (filename?: string) => chartRef.current?.downloadPNG(filename),
     }), []);
 
-    // Initialize chart.
+    // Initialize chart once.
     useEffect(() => {
         if (canvasRef.current === null) return;
 
@@ -79,16 +97,16 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
         chart.setCallbacks({
             onCandleHover: (candle) => {
                 setHoveredCandle(candle);
-                onCandleHover?.(candle);
+                onCandleHoverRef.current?.(candle);
             },
             onCrosshairMove: (state) => {
                 setCrosshair(state);
             },
             onDrawingChange: (drawings) => {
-                onDrawingChange?.(drawings);
+                onDrawingChangeRef.current?.(drawings);
             },
             onDrawingSelect: (drawing) => {
-                onDrawingSelect?.(drawing);
+                onDrawingSelectRef.current?.(drawing);
             },
         });
 
@@ -98,7 +116,15 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
             chart.destroy();
             chartRef.current = null;
         };
-    }, [width, height, onCandleHover, onDrawingChange, onDrawingSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Handle resize separately without recreating the chart.
+    useEffect(() => {
+        if (chartRef.current !== null) {
+            chartRef.current.resize(width, height);
+        }
+    }, [width, height]);
 
     // Update data.
     useEffect(() => {

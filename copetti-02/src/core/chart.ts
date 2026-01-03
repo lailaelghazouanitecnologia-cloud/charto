@@ -536,6 +536,25 @@ export class ChartEngine {
         return { ...this.viewport };
     }
 
+    /** Resize the chart without destroying state. */
+    resize(width: number, height: number): void {
+        if (this.config.width === width && this.config.height === height) {
+            return;
+        }
+
+        this.config.width = width;
+        this.config.height = height;
+        this.canvas.resize(width, height);
+        this.calculateLayout();
+        this.updateScales();
+        this.scheduleRender();
+    }
+
+    /** Get current dimensions. */
+    getDimensions(): { width: number; height: number } {
+        return { width: this.config.width, height: this.config.height };
+    }
+
     /** Export chart as PNG data URL. */
     exportToPNG(): string {
         // Force a render to ensure the latest state.
