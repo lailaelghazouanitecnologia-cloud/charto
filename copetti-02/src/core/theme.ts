@@ -54,38 +54,38 @@ export interface ChartTheme {
     overlayStrong: string;
 }
 
-/** Dark theme (default). */
+/** Dark theme (default) - MoonBucks style. */
 export const DARK_THEME: ChartTheme = {
     name: "dark",
 
-    background: "#0a0a0f",
-    backgroundAlt: "#121218",
+    background: "transparent",
+    backgroundAlt: "#111111",
 
-    grid: "#1a1a24",
-    border: "#2a2a36",
+    grid: "rgba(255, 255, 255, 0.04)",
+    border: "rgba(255, 255, 255, 0.08)",
 
-    text: "#e4e4e7",
-    textMuted: "#71717a",
-    textInverted: "#18181b",
+    text: "rgba(255, 255, 255, 0.8)",
+    textMuted: "rgba(255, 255, 255, 0.4)",
+    textInverted: "#111111",
 
     upColor: "#22c55e",
     downColor: "#ef4444",
-    upColorTransparent: "rgba(34, 197, 94, 0.2)",
-    downColorTransparent: "rgba(239, 68, 68, 0.2)",
+    upColorTransparent: "rgba(34, 197, 94, 0.25)",
+    downColorTransparent: "rgba(239, 68, 68, 0.25)",
 
-    crosshair: "#666666",
-    crosshairLabel: "#333333",
-    crosshairLabelText: "#ffffff",
+    crosshair: "rgba(255, 255, 255, 0.2)",
+    crosshairLabel: "#111111",
+    crosshairLabelText: "rgba(255, 255, 255, 0.8)",
 
-    drawingDefault: "#60a5fa",
+    drawingDefault: "#22c55e",
     drawingSelected: "#ffffff",
 
     indicatorSma: "#60a5fa",
     indicatorEma: "#f59e0b",
     indicatorBollinger: "#8b5cf6",
 
-    volumeUp: "rgba(34, 197, 94, 0.5)",
-    volumeDown: "rgba(239, 68, 68, 0.5)",
+    volumeUp: "rgba(34, 197, 94, 0.4)",
+    volumeDown: "rgba(239, 68, 68, 0.4)",
 
     overlay: "rgba(0, 0, 0, 0.5)",
     overlayStrong: "rgba(0, 0, 0, 0.8)",

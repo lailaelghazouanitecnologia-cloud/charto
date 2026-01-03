@@ -6,9 +6,10 @@ import { Canvas, createCanvas } from "./canvas.ts";
 import { createScale, type LinearScale } from "./scale.ts";
 import type { Candle, ChartConfig, Pixel, Point, ColorHex } from "./types.ts";
 import { DEFAULT_CONFIG } from "./types.ts";
+import { DARK_THEME, type ChartTheme, type ThemeType, getTheme } from "./theme.ts";
 
 // Re-export types for convenience.
-export type { Candle };
+export type { Candle, ChartTheme, ThemeType };
 import {
     sma,
     ema,
@@ -74,6 +75,7 @@ export class ChartEngine {
     private readonly canvas: Canvas;
     private readonly ctx: CanvasRenderingContext2D;
     private config: ChartConfig;
+    private theme: ChartTheme;
     private candles: Candle[] = [];
     private chartType: ChartType = "candlestick";
 
@@ -119,8 +121,9 @@ export class ChartEngine {
     private drawingManager: DrawingManager = new DrawingManager();
     private isDrawing = false;
 
-    constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}) {
+    constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}, theme: ChartTheme = DARK_THEME) {
         this.config = { ...DEFAULT_CONFIG, ...config };
+        this.theme = theme;
         this.canvas = createCanvas(element, this.config.width, this.config.height);
         this.ctx = this.canvas.getContext();
 
@@ -472,6 +475,17 @@ export class ChartEngine {
         this.callbacks = callbacks;
     }
 
+    /** Get current theme. */
+    getTheme(): ChartTheme {
+        return this.theme;
+    }
+
+    /** Set theme. */
+    setTheme(theme: ChartTheme | ThemeType): void {
+        this.theme = typeof theme === "string" ? getTheme(theme) : theme;
+        this.scheduleRender();
+    }
+
     /** Set indicators. */
     setIndicators(indicators: IndicatorConfig[]): void {
         this.indicators = indicators;
@@ -704,7 +718,7 @@ export class ChartEngine {
         }
 
         ctx.closePath();
-        ctx.fillStyle = "rgba(34, 197, 94, 0.08)";
+        ctx.fillStyle = this.theme.upColorTransparent.replace("0.25", "0.08");
         ctx.fill();
     }
 
@@ -714,8 +728,8 @@ export class ChartEngine {
 
         // Clear canvas first (required for transparent backgrounds).
         ctx.clearRect(0, 0, this.config.width, this.config.height);
-        if (this.config.backgroundColor !== "transparent") {
-            ctx.fillStyle = this.config.backgroundColor;
+        if (this.theme.background !== "transparent") {
+            ctx.fillStyle = this.theme.background;
             ctx.fillRect(0, 0, this.config.width, this.config.height);
         }
 
@@ -773,7 +787,7 @@ export class ChartEngine {
         const { ctx } = this;
         const { chart } = this.layout;
 
-        ctx.strokeStyle = this.config.gridColor;
+        ctx.strokeStyle = this.theme.grid;
         ctx.lineWidth = 1;
 
         // Horizontal lines.
@@ -817,7 +831,7 @@ export class ChartEngine {
 
             const x = this.xScale.toPixel(i);
             const isUp = candle.close >= candle.open;
-            const color = isUp ? this.config.upColor : this.config.downColor;
+            const color = isUp ? this.theme.upColor : this.theme.downColor;
 
             const highY = this.yScale.toPixel(candle.high);
             const lowY = this.yScale.toPixel(candle.low);
@@ -841,7 +855,7 @@ export class ChartEngine {
         const start = Math.floor(this.viewport.startIndex);
         const end = Math.ceil(this.viewport.endIndex);
 
-        ctx.strokeStyle = "#22c55e";
+        ctx.strokeStyle = this.theme.upColor;
         ctx.lineWidth = 1.5;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
@@ -906,8 +920,8 @@ export class ChartEngine {
 
         // Gradient fill.
         const gradient = ctx.createLinearGradient(0, chart.y, 0, chart.y + chart.height);
-        gradient.addColorStop(0, "rgba(34, 197, 94, 0.25)");
-        gradient.addColorStop(1, "rgba(34, 197, 94, 0.02)");
+        gradient.addColorStop(0, this.theme.upColorTransparent);
+        gradient.addColorStop(1, this.theme.upColorTransparent.replace(/[\d.]+\)$/, "0.02)"));
         ctx.fillStyle = gradient;
         ctx.fill();
 
@@ -931,15 +945,12 @@ export class ChartEngine {
 
             const x = this.xScale.toPixel(i);
             const isUp = candle.close >= candle.open;
-            const color = isUp ? this.config.upColor : this.config.downColor;
 
             const barHeight = this.volumeScale.toPixel(0) - this.volumeScale.toPixel(candle.volume);
             const y = volume.y + volume.height - barHeight;
 
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = isUp ? this.theme.volumeUp : this.theme.volumeDown;
             ctx.fillRect(x - barWidth / 2, y, barWidth, barHeight);
-            ctx.globalAlpha = 1;
         }
     }
 
@@ -949,12 +960,12 @@ export class ChartEngine {
         const { yAxis, chart } = this.layout;
 
         ctx.clearRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
-        if (this.config.backgroundColor !== "transparent") {
-            ctx.fillStyle = this.config.backgroundColor;
+        if (this.theme.background !== "transparent") {
+            ctx.fillStyle = this.theme.background;
             ctx.fillRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
         }
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.fillStyle = this.theme.textMuted;
         ctx.font = "10px monospace";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -976,12 +987,12 @@ export class ChartEngine {
         const { xAxis } = this.layout;
 
         ctx.clearRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
-        if (this.config.backgroundColor !== "transparent") {
-            ctx.fillStyle = this.config.backgroundColor;
+        if (this.theme.background !== "transparent") {
+            ctx.fillStyle = this.theme.background;
             ctx.fillRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
         }
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.fillStyle = this.theme.textMuted;
         ctx.font = "10px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
@@ -1007,7 +1018,7 @@ export class ChartEngine {
         const { chart, yAxis, xAxis } = this.layout;
 
         ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.strokeStyle = this.theme.crosshair;
         ctx.lineWidth = 1;
 
         // Vertical line.
@@ -1026,9 +1037,9 @@ export class ChartEngine {
 
         // Price label.
         const priceLabel = this.crosshair.price.toFixed(2);
-        ctx.fillStyle = "#111111";
+        ctx.fillStyle = this.theme.crosshairLabel;
         ctx.fillRect(yAxis.x, this.crosshair.y - 10, yAxis.width - 4, 20);
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.fillStyle = this.theme.crosshairLabelText;
         ctx.font = "10px monospace";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -1041,9 +1052,9 @@ export class ChartEngine {
             const timeLabel = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 
             const labelWidth = 50;
-            ctx.fillStyle = "#111111";
+            ctx.fillStyle = this.theme.crosshairLabel;
             ctx.fillRect(this.crosshair.x - labelWidth / 2, xAxis.y + 2, labelWidth, 18);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillStyle = this.theme.crosshairLabelText;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.fillText(timeLabel, this.crosshair.x, xAxis.y + 6);
@@ -1068,8 +1079,9 @@ export class ChartEngine {
 export function createChart(
     element: HTMLCanvasElement,
     config?: Partial<ChartConfig>,
+    theme?: ChartTheme,
 ): ChartEngine {
-    return new ChartEngine(element, config);
+    return new ChartEngine(element, config, theme);
 }
 
 // Keep old Chart class for backwards compatibility.
