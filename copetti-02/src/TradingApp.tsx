@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Chart, type ChartRef, type ChartType, type AnyDrawing } from "./components/Chart.tsx";
 import { TooltipProvider } from "./components/ui/tooltip.tsx";
 import { cn } from "./lib/utils.ts";
@@ -14,16 +14,17 @@ import {
     GadgetWrapper,
     getRegisteredGadgets,
 } from "./gadget/index.ts";
-import { tokenize, TOKEN_COLORS, DEFAULT_SCRIPT } from "./scripting/index.ts";
+import {
+    ScriptingPanel,
+    OpenPositionsPanel,
+    BottomTabs,
+    type BottomTab,
+} from "./components/BottomPanel.tsx";
 import {
     Menu,
     Search,
     Filter,
     Clock,
-    ChevronDown,
-    ChevronUp,
-    Play,
-    Terminal,
     Plus,
     MousePointer2,
     TrendingUp,
@@ -150,24 +151,6 @@ function Sidebar() {
     );
 }
 
-function BottomPanel() {
-    const gadgets = useZoneGadgets("bottom");
-    const { bottomVisible, toggleBottom, bottomHeight } = useLayout();
-
-    if (!bottomVisible || gadgets.length === 0) return null;
-
-    return (
-        <div
-            className="flex flex-shrink-0 flex-col rounded-t-xl bg-[#111]"
-            style={{ height: bottomHeight }}
-        >
-            {gadgets.map((config) => (
-                <GadgetWrapper key={config.id} config={config} className="flex-1" />
-            ))}
-        </div>
-    );
-}
-
 function TradingAppContent() {
     const [candles, setCandles] = useState<Candle[]>(() =>
         generateCandles(200, 5670.98, "SPX")
@@ -178,29 +161,26 @@ function TradingAppContent() {
     const [drawingTool, setDrawingTool] = useState<DrawingToolType | null>(null);
     const [drawings, setDrawings] = useState<readonly AnyDrawing[]>([]);
     const [selectedDrawing, setSelectedDrawing] = useState<AnyDrawing | null>(null);
-    const [showScripting, setShowScripting] = useState(false);
-    const [scriptCode, setScriptCode] = useState(DEFAULT_SCRIPT);
-    const [scriptOutput, setScriptOutput] = useState("");
+    const [bottomTab, setBottomTab] = useState<BottomTab>(null);
     const chartRef = useRef<ChartRef>(null);
     const [chartDimensions, setChartDimensions] = useState({ width: 1200, height: 600 });
 
-    const { sidebarVisible, bottomVisible, sidebarWidth, bottomHeight } = useLayout();
+    const { sidebarVisible, sidebarWidth } = useLayout();
 
     useEffect(() => {
         const updateDimensions = () => {
             const rightWidth = sidebarVisible ? sidebarWidth : 0;
             const headerHeight = 40;
-            const bottomPanelHeight = bottomVisible ? bottomHeight : 0;
-            const scriptingHeight = showScripting ? 140 : 0;
+            const bottomPanelHeight = bottomTab ? 200 : 0;
             setChartDimensions({
                 width: Math.max(400, window.innerWidth - rightWidth - 12),
-                height: Math.max(300, window.innerHeight - headerHeight - bottomPanelHeight - scriptingHeight - 12),
+                height: Math.max(300, window.innerHeight - headerHeight - bottomPanelHeight - 12),
             });
         };
         updateDimensions();
         window.addEventListener("resize", updateDimensions);
         return () => window.removeEventListener("resize", updateDimensions);
-    }, [sidebarVisible, bottomVisible, sidebarWidth, bottomHeight, showScripting]);
+    }, [sidebarVisible, sidebarWidth, bottomTab]);
 
     const handleDrawingChange = useCallback((newDrawings: readonly AnyDrawing[]) => {
         setDrawings(newDrawings);
@@ -215,10 +195,6 @@ function TradingAppContent() {
         setDrawings([]);
     }, []);
 
-    const runScript = () => {
-        setScriptOutput("Running...\n> Bullish trend detected\n> Price: $5,670.98\n> SMA(20): $5,420.25");
-    };
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -229,14 +205,10 @@ function TradingAppContent() {
                 chartRef.current?.deleteSelectedDrawing();
                 setSelectedDrawing(null);
             }
-            if (e.ctrlKey && e.key === "Enter" && showScripting) {
-                e.preventDefault();
-                runScript();
-            }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedDrawing, showScripting]);
+    }, [selectedDrawing]);
 
     return (
         <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#0a0a0a]">
@@ -387,78 +359,18 @@ function TradingAppContent() {
                 {sidebarVisible && <Sidebar />}
             </main>
 
-            {/* Bottom Panel */}
-            <BottomPanel />
+            {/* Bottom Panels */}
+            <ScriptingPanel
+                visible={bottomTab === "scripting"}
+                onClose={() => setBottomTab(null)}
+            />
+            <OpenPositionsPanel
+                visible={bottomTab === "positions"}
+                onClose={() => setBottomTab(null)}
+            />
 
-            {/* Scripting Panel */}
-            {showScripting && (
-                <div className="relative z-40 flex h-[140px] flex-shrink-0 bg-[#111]">
-                    <div className="flex flex-1 flex-col">
-                        {/* Scripting Header */}
-                        <div className="flex h-7 items-center justify-between px-3">
-                            <div className="flex items-center gap-2">
-                                <Terminal size={10} className="text-[#444]" />
-                                <span className="text-[10px] font-medium text-[#666]">Scripting</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={runScript}
-                                    className="flex items-center gap-1 rounded bg-[#22c55e]/20 px-2 py-0.5 text-[9px] font-medium text-[#22c55e] hover:bg-[#22c55e]/30"
-                                >
-                                    <Play size={9} /> Run
-                                </button>
-                                <button onClick={() => setShowScripting(false)} className="text-[#444] hover:text-white">
-                                    <ChevronDown size={12} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-1 overflow-hidden">
-                            {/* Syntax Highlighted Editor */}
-                            <div className="relative flex-1 overflow-hidden">
-                                {/* Highlighted overlay */}
-                                <pre className="pointer-events-none absolute inset-0 overflow-auto p-2 font-mono text-[10px] leading-relaxed">
-                                    {tokenize(scriptCode).map((token, i) => (
-                                        <span key={i} style={{ color: TOKEN_COLORS[token.type] }}>
-                                            {token.value}
-                                        </span>
-                                    ))}
-                                    <span> </span>
-                                </pre>
-                                {/* Invisible textarea for input */}
-                                <textarea
-                                    value={scriptCode}
-                                    onChange={(e) => setScriptCode(e.target.value)}
-                                    spellCheck={false}
-                                    className="absolute inset-0 h-full w-full resize-none bg-transparent p-2 font-mono text-[10px] leading-relaxed text-transparent caret-white outline-none"
-                                    style={{ caretColor: "#888" }}
-                                    placeholder="// Write your script here..."
-                                />
-                            </div>
-
-                            {/* Output */}
-                            <div className="w-[280px] overflow-auto bg-[#0a0a0a] p-2">
-                                <div className="mb-1 text-[8px] uppercase tracking-wide text-[#333]">Output</div>
-                                <pre className="font-mono text-[9px] leading-relaxed text-[#22c55e]">
-                                    {scriptOutput || "// Run script to see output"}
-                                </pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Scripting Toggle - Bottom Right */}
-            {!showScripting && (
-                <button
-                    onClick={() => setShowScripting(true)}
-                    className="fixed bottom-3 right-3 z-50 flex items-center gap-1.5 rounded-lg bg-[#111] px-3 py-1.5 text-[10px] text-[#888] hover:text-white"
-                >
-                    <Terminal size={12} />
-                    <span>Scripting</span>
-                    <ChevronUp size={10} />
-                </button>
-            )}
+            {/* Bottom Tabs */}
+            <BottomTabs activeTab={bottomTab} onTabChange={setBottomTab} />
 
             {/* Gadget Add Button - Top Right of Chart */}
             <div className="absolute right-[252px] top-12 z-10">
@@ -477,7 +389,7 @@ export default function TradingApp() {
                     { type: "performance" },
                     { type: "technicals" },
                     { type: "watchlist" },
-                    { type: "screener", zone: "bottom" },
+                    { type: "screener", collapsed: true },
                 ]}
             >
                 <TradingAppContent />

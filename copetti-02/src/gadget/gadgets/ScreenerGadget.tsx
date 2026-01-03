@@ -149,7 +149,7 @@ export function ScreenerGadget({ data }: GadgetProps) {
 registerGadget({
     type: "screener",
     title: "Stock Screener",
-    defaultZone: "bottom",
-    defaultCollapsed: false,
+    defaultZone: "sidebar",
+    defaultCollapsed: true,
     component: ScreenerGadget,
 });
