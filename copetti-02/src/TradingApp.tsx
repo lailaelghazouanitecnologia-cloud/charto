@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Chart, type ChartRef, type ChartType, type AnyDrawing } from "./components/Chart.tsx";
 import { TooltipProvider } from "./components/ui/tooltip.tsx";
 import { cn } from "./lib/utils.ts";
@@ -8,31 +8,35 @@ import type { Candle } from "./core/types.ts";
 import type { IndicatorConfig } from "./core/chart.ts";
 import type { DrawingToolType } from "./core/drawing.ts";
 import {
-    TrendingUp,
-    Minus,
-    MousePointer2,
-    PenLine,
-    Ruler,
-    Square,
-    Crosshair,
-    CandlestickChart,
-    LineChart,
-    AreaChart,
-    Star,
-    Activity,
-    Trash2,
-    Circle,
+    LayoutProvider,
+    useLayout,
+    useZoneGadgets,
+    GadgetWrapper,
+    getRegisteredGadgets,
+} from "./gadget/index.ts";
+import { tokenize, TOKEN_COLORS, DEFAULT_SCRIPT } from "./scripting/index.ts";
+import {
     Menu,
     Search,
     Filter,
     Clock,
     ChevronDown,
-    ChevronRight,
+    ChevronUp,
     Play,
     Terminal,
-    Eye,
-    EyeOff,
-    X,
+    Plus,
+    MousePointer2,
+    TrendingUp,
+    Minus,
+    PenLine,
+    Square,
+    Ruler,
+    Crosshair,
+    CandlestickChart,
+    LineChart,
+    AreaChart,
+    Trash2,
+    MoreVertical,
 } from "lucide-react";
 
 function generateCandles(count: number, startPrice: number, symbol: string): Candle[] {
@@ -56,15 +60,7 @@ function generateCandles(count: number, startPrice: number, symbol: string): Can
     return candles;
 }
 
-const WATCHLIST = [
-    { symbol: "BTC/USD", name: "Bitcoin", price: 43250.50, change: 2.34 },
-    { symbol: "ETH/USD", name: "Ethereum", price: 2280.75, change: -1.12 },
-    { symbol: "SOL/USD", name: "Solana", price: 98.42, change: 5.67 },
-    { symbol: "AAPL", name: "Apple", price: 178.25, change: 0.85 },
-    { symbol: "NVDA", name: "NVIDIA", price: 495.20, change: 4.15 },
-];
-
-const TIMEFRAMES = ["15m", "1H", "4H", "1D", "1W"];
+const TIMEFRAMES = ["1D", "5D", "1W", "1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"];
 
 const DRAWING_TOOLS: { tool: DrawingToolType | null; icon: typeof MousePointer2 }[] = [
     { tool: null, icon: MousePointer2 },
@@ -88,108 +84,6 @@ const PRESET_INDICATORS: IndicatorConfig[] = [
     { type: "bollinger", period: 20, color: "#06b6d4", enabled: false },
 ];
 
-const DEFAULT_SCRIPT = `// MMS Scripting Console
-// Ctrl+Enter to run
-
-const price = @query("BTC/USD")
-const sma = @sma(price, 20)
-
-if price > sma {
-    @print("Bullish trend")
-} else {
-    @print("Bearish trend")
-}`;
-
-// Tokenizer for MMS scripting language.
-interface Token {
-    type: "comment" | "keyword" | "technical" | "string" | "number" | "operator" | "text";
-    value: string;
-}
-
-const KEYWORDS = new Set(["if", "else", "const", "let", "var", "return", "for", "while", "function", "true", "false"]);
-const TECHNICALS = new Set(["@sma", "@ema", "@rsi", "@macd", "@bbands", "@atr", "@stoch", "@query", "@print", "@alert", "@signal", "@plot"]);
-
-function tokenize(code: string): Token[] {
-    const tokens: Token[] = [];
-    let i = 0;
-
-    while (i < code.length) {
-        // Comment.
-        if (code[i] === "/" && code[i + 1] === "/") {
-            let end = code.indexOf("\n", i);
-            if (end === -1) end = code.length;
-            tokens.push({ type: "comment", value: code.slice(i, end) });
-            i = end;
-            continue;
-        }
-
-        // String.
-        if (code[i] === '"' || code[i] === "'") {
-            const quote = code[i];
-            let end = i + 1;
-            while (end < code.length && code[end] !== quote) {
-                if (code[end] === "\\") end++;
-                end++;
-            }
-            tokens.push({ type: "string", value: code.slice(i, end + 1) });
-            i = end + 1;
-            continue;
-        }
-
-        // Technical indicator (@ prefix).
-        if (code[i] === "@") {
-            let end = i + 1;
-            while (end < code.length && /[a-zA-Z_]/.test(code[end]!)) end++;
-            const word = code.slice(i, end);
-            tokens.push({ type: TECHNICALS.has(word) ? "technical" : "text", value: word });
-            i = end;
-            continue;
-        }
-
-        // Word (keyword or identifier).
-        if (/[a-zA-Z_]/.test(code[i]!)) {
-            let end = i;
-            while (end < code.length && /[a-zA-Z0-9_]/.test(code[end]!)) end++;
-            const word = code.slice(i, end);
-            tokens.push({ type: KEYWORDS.has(word) ? "keyword" : "text", value: word });
-            i = end;
-            continue;
-        }
-
-        // Number.
-        if (/[0-9]/.test(code[i]!) || (code[i] === "." && /[0-9]/.test(code[i + 1] ?? ""))) {
-            let end = i;
-            while (end < code.length && /[0-9.]/.test(code[end]!)) end++;
-            tokens.push({ type: "number", value: code.slice(i, end) });
-            i = end;
-            continue;
-        }
-
-        // Operators.
-        if (/[+\-*/<>=!&|{}()[\],;]/.test(code[i]!)) {
-            tokens.push({ type: "operator", value: code[i]! });
-            i++;
-            continue;
-        }
-
-        // Other (whitespace, etc.).
-        tokens.push({ type: "text", value: code[i]! });
-        i++;
-    }
-
-    return tokens;
-}
-
-const TOKEN_COLORS: Record<Token["type"], string> = {
-    comment: "#555",
-    keyword: "#c678dd",
-    technical: "#22c55e",
-    string: "#e5c07b",
-    number: "#d19a66",
-    operator: "#56b6c2",
-    text: "#888",
-};
-
 function ToolButton({ active, onClick, children, className }: {
     active?: boolean;
     onClick?: () => void;
@@ -200,8 +94,8 @@ function ToolButton({ active, onClick, children, className }: {
         <button
             onClick={onClick}
             className={cn(
-                "flex h-6 w-6 items-center justify-center rounded transition-all active:scale-95",
-                active ? "bg-[#1a1a1a] text-white" : "text-[#555] hover:text-[#888]",
+                "flex h-6 w-6 items-center justify-center rounded transition-all",
+                active ? "bg-[#161616] text-white" : "text-[#888] hover:text-white",
                 className
             )}
         >
@@ -210,45 +104,103 @@ function ToolButton({ active, onClick, children, className }: {
     );
 }
 
-export default function TradingApp() {
-    const [activeSymbol, setActiveSymbol] = useState(WATCHLIST[0]!);
+function GadgetAddMenu() {
+    const { addGadget } = useLayout();
+    const [open, setOpen] = useState(false);
+    const gadgets = getRegisteredGadgets();
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen(!open)}
+                className="flex h-6 items-center gap-1 rounded bg-[#111] px-2 text-[10px] text-[#888] hover:text-white"
+            >
+                <Plus size={10} />
+                <span>Add Gadget</span>
+            </button>
+            {open && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg bg-[#111] p-1 shadow-xl">
+                    {gadgets.map((g) => (
+                        <button
+                            key={g.type}
+                            onClick={() => {
+                                addGadget(g.type);
+                                setOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px] text-[#888] hover:bg-[#1a1a1a] hover:text-white"
+                        >
+                            {g.title}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Sidebar() {
+    const gadgets = useZoneGadgets("sidebar");
+
+    return (
+        <aside className="flex h-full w-[240px] flex-col gap-1.5 overflow-y-auto p-1.5">
+            {gadgets.map((config) => (
+                <GadgetWrapper key={config.id} config={config} />
+            ))}
+        </aside>
+    );
+}
+
+function BottomPanel() {
+    const gadgets = useZoneGadgets("bottom");
+    const { bottomVisible, toggleBottom, bottomHeight } = useLayout();
+
+    if (!bottomVisible || gadgets.length === 0) return null;
+
+    return (
+        <div
+            className="flex flex-shrink-0 flex-col rounded-t-xl bg-[#111]"
+            style={{ height: bottomHeight }}
+        >
+            {gadgets.map((config) => (
+                <GadgetWrapper key={config.id} config={config} className="flex-1" />
+            ))}
+        </div>
+    );
+}
+
+function TradingAppContent() {
     const [candles, setCandles] = useState<Candle[]>(() =>
-        generateCandles(200, activeSymbol.price, activeSymbol.symbol)
+        generateCandles(200, 5670.98, "SPX")
     );
     const [chartType, setChartType] = useState<ChartType>("area");
-    const [timeframe, setTimeframe] = useState("4H");
+    const [timeframe, setTimeframe] = useState("6M");
     const [indicators, setIndicators] = useState<IndicatorConfig[]>(PRESET_INDICATORS);
     const [drawingTool, setDrawingTool] = useState<DrawingToolType | null>(null);
     const [drawings, setDrawings] = useState<readonly AnyDrawing[]>([]);
     const [selectedDrawing, setSelectedDrawing] = useState<AnyDrawing | null>(null);
-    const [favorites, setFavorites] = useState<Set<string>>(new Set(["BTC/USD", "ETH/USD"]));
-    const [showIndicators, setShowIndicators] = useState(false);
-    const [showDrawingTools, setShowDrawingTools] = useState(false);
-    const [showWatchlist, setShowWatchlist] = useState(false);
-    const [showScripting, setShowScripting] = useState(true);
+    const [showScripting, setShowScripting] = useState(false);
     const [scriptCode, setScriptCode] = useState(DEFAULT_SCRIPT);
     const [scriptOutput, setScriptOutput] = useState("");
     const chartRef = useRef<ChartRef>(null);
     const [chartDimensions, setChartDimensions] = useState({ width: 1200, height: 600 });
 
+    const { sidebarVisible, bottomVisible, sidebarWidth, bottomHeight } = useLayout();
+
     useEffect(() => {
         const updateDimensions = () => {
-            const watchlistWidth = showWatchlist ? 200 : 0;
+            const rightWidth = sidebarVisible ? sidebarWidth : 0;
             const headerHeight = 40;
+            const bottomPanelHeight = bottomVisible ? bottomHeight : 0;
             const scriptingHeight = showScripting ? 140 : 0;
             setChartDimensions({
-                width: Math.max(400, window.innerWidth - watchlistWidth),
-                height: Math.max(300, window.innerHeight - headerHeight - scriptingHeight),
+                width: Math.max(400, window.innerWidth - rightWidth - 12),
+                height: Math.max(300, window.innerHeight - headerHeight - bottomPanelHeight - scriptingHeight - 12),
             });
         };
         updateDimensions();
         window.addEventListener("resize", updateDimensions);
         return () => window.removeEventListener("resize", updateDimensions);
-    }, [showWatchlist, showScripting]);
-
-    useEffect(() => {
-        setCandles(generateCandles(200, activeSymbol.price, activeSymbol.symbol));
-    }, [activeSymbol]);
+    }, [sidebarVisible, bottomVisible, sidebarWidth, bottomHeight, showScripting]);
 
     const handleDrawingChange = useCallback((newDrawings: readonly AnyDrawing[]) => {
         setDrawings(newDrawings);
@@ -263,22 +215,14 @@ export default function TradingApp() {
         setDrawings([]);
     }, []);
 
-    const toggleIndicator = (index: number) => {
-        setIndicators(prev => prev.map((ind, i) =>
-            i === index ? { ...ind, enabled: !ind.enabled } : ind
-        ));
-    };
-
     const runScript = () => {
-        setScriptOutput("Running...\n> Bullish trend detected\n> Price: $43,250.50\n> SMA(20): $42,180.25");
+        setScriptOutput("Running...\n> Bullish trend detected\n> Price: $5,670.98\n> SMA(20): $5,420.25");
     };
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 setDrawingTool(null);
-                setShowDrawingTools(false);
-                setShowIndicators(false);
                 chartRef.current?.cancelDrawing();
             }
             if ((e.key === "Delete" || e.key === "Backspace") && selectedDrawing) {
@@ -294,313 +238,250 @@ export default function TradingApp() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [selectedDrawing, showScripting]);
 
-    const lastCandle = candles[candles.length - 1];
-    const priceChange = lastCandle && candles[0]
-        ? ((lastCandle.close - candles[0].open) / candles[0].open * 100)
-        : 0;
-
     return (
-        <TooltipProvider delayDuration={200}>
-            <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#050505]">
-                {/* Subtle Grid Background */}
-                <div className="pointer-events-none absolute inset-0 z-0">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(15,15,25,0.4)_0%,_transparent_70%)]" />
-                    <div className="absolute inset-0 opacity-[0.015]" style={{
-                        backgroundImage: `
-                            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
-                        `,
-                        backgroundSize: '60px 60px'
-                    }} />
+        <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#0a0a0a]">
+            {/* Header */}
+            <header className="relative z-50 flex h-10 flex-shrink-0 items-center justify-between px-3">
+                <div className="flex items-center gap-3">
+                    <button className="text-[#888] hover:text-white">
+                        <Menu size={14} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-gradient-to-br from-indigo-600 to-purple-600">
+                            <Clock size={12} className="text-white" />
+                        </div>
+                        <div className="flex flex-col leading-none">
+                            <span className="text-[11px] font-semibold text-white">MoonBucks</span>
+                            <span className="text-[8px] text-[#444]">not only to the moon, but beyond</span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Header */}
-                <header className="relative z-50 flex h-10 flex-shrink-0 items-center justify-between px-3">
-                    <div className="flex items-center gap-3">
-                        <button className="text-[#444] hover:text-white">
-                            <Menu size={14} />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-indigo-600 to-purple-600">
-                                <Clock size={10} className="text-white" />
-                            </div>
-                            <span className="text-[11px] font-semibold text-white">MoonBucks</span>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                        <div className="flex items-center rounded bg-[#0a0a0a]/80 p-0.5">
-                            {CHART_TYPES.map(({ type, icon: Icon }) => (
-                                <button
-                                    key={type}
-                                    onClick={() => setChartType(type)}
-                                    className={cn(
-                                        "flex h-[22px] w-6 items-center justify-center rounded transition-colors",
-                                        chartType === type ? "bg-[#151515] text-white" : "text-[#444] hover:text-[#888]"
-                                    )}
-                                >
-                                    <Icon size={11} />
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex items-center rounded bg-[#0a0a0a]/80 p-0.5">
-                            {TIMEFRAMES.map((tf) => (
-                                <button
-                                    key={tf}
-                                    onClick={() => setTimeframe(tf)}
-                                    className={cn(
-                                        "flex h-[22px] items-center justify-center rounded px-2 text-[10px] font-medium transition-colors",
-                                        timeframe === tf ? "bg-[#151515] text-white" : "text-[#444] hover:text-[#888]"
-                                    )}
-                                >
-                                    {tf}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex h-6 items-center gap-1.5 rounded bg-[#0a0a0a]/80 px-2">
-                            <Search size={11} className="text-[#333]" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className="w-16 bg-transparent text-[10px] text-white outline-none placeholder:text-[#333]"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setShowWatchlist(!showWatchlist)}
-                            className={cn("rounded p-1.5 transition-colors", showWatchlist ? "bg-[#111] text-white" : "text-[#444] hover:text-white")}
-                        >
-                            {showWatchlist ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                        <button
-                            onClick={() => setShowScripting(!showScripting)}
-                            className={cn("rounded p-1.5 transition-colors", showScripting ? "bg-[#111] text-white" : "text-[#444] hover:text-white")}
-                        >
-                            <Terminal size={12} />
-                        </button>
-                    </div>
-                </header>
-
-                {/* Main Content */}
-                <main className="relative flex flex-1 overflow-hidden">
-                    {/* Chart Area */}
-                    <div className="relative flex-1">
-                        <Chart
-                            ref={chartRef}
-                            data={candles}
-                            chartType={chartType}
-                            indicators={indicators}
-                            drawingTool={drawingTool}
-                            onDrawingChange={handleDrawingChange}
-                            onDrawingSelect={handleDrawingSelect}
-                            width={chartDimensions.width}
-                            height={chartDimensions.height}
-                        />
-
-                        {/* Price & Performance - Always Visible */}
-                        <div className="absolute right-3 top-3 z-10">
-                            <div className="rounded-lg bg-[#080808]/90 p-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-white">{activeSymbol.symbol}</span>
-                                    <button
-                                        onClick={() => {
-                                            setFavorites(prev => {
-                                                const next = new Set(prev);
-                                                next.has(activeSymbol.symbol) ? next.delete(activeSymbol.symbol) : next.add(activeSymbol.symbol);
-                                                return next;
-                                            });
-                                        }}
-                                        className={favorites.has(activeSymbol.symbol) ? "text-yellow-500" : "text-[#333]"}
-                                    >
-                                        <Star size={10} fill={favorites.has(activeSymbol.symbol) ? "currentColor" : "none"} />
-                                    </button>
-                                </div>
-                                <div className="mt-1 text-xl font-light tabular-nums text-white">
-                                    ${lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                </div>
-                                <div className={cn("text-[11px] font-semibold tabular-nums", priceChange >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
-                                    {priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%
-                                </div>
-
-                                {/* Performance grid - no title */}
-                                <div className="mt-2 grid grid-cols-3 gap-1">
-                                    {[
-                                        { l: "1W", v: -5.25 }, { l: "1M", v: -7.15 }, { l: "3M", v: -8.40 },
-                                        { l: "6M", v: -5.14 }, { l: "YTD", v: -8.58 }, { l: "1Y", v: 3.89 },
-                                    ].map(({ l, v }) => (
-                                        <div key={l} className={cn(
-                                            "rounded px-1.5 py-1 text-center",
-                                            v >= 0 ? "bg-[#22c55e]/10" : "bg-[#ef4444]/10"
-                                        )}>
-                                            <div className={cn("text-[9px] font-bold tabular-nums", v >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
-                                                {v >= 0 ? "+" : ""}{v.toFixed(1)}%
-                                            </div>
-                                            <div className="text-[7px] text-[#444]">{l}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Left Tools */}
-                        <div className="absolute left-2 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1">
-                            <div className="flex flex-col gap-0.5 rounded bg-[#0a0a0a]/80 p-1">
-                                {showDrawingTools ? (
-                                    <>
-                                        {DRAWING_TOOLS.map(({ tool, icon: Icon }) => (
-                                            <ToolButton
-                                                key={tool ?? "select"}
-                                                active={drawingTool === tool}
-                                                onClick={() => {
-                                                    setDrawingTool(tool);
-                                                    if (tool === null) setShowDrawingTools(false);
-                                                }}
-                                            >
-                                                <Icon size={11} strokeWidth={1.5} />
-                                            </ToolButton>
-                                        ))}
-                                        {drawings.length > 0 && (
-                                            <ToolButton onClick={handleClearDrawings} className="text-[#ef4444]/50 hover:text-[#ef4444]">
-                                                <Trash2 size={11} strokeWidth={1.5} />
-                                            </ToolButton>
-                                        )}
-                                    </>
-                                ) : (
-                                    <ToolButton onClick={() => setShowDrawingTools(true)} active={drawingTool !== null}>
-                                        <PenLine size={11} strokeWidth={1.5} />
-                                    </ToolButton>
+                <div className="flex items-center gap-1.5">
+                    {/* Chart Type */}
+                    <div className="flex items-center rounded-md bg-[#111] p-0.5">
+                        {CHART_TYPES.map(({ type, icon: Icon }) => (
+                            <button
+                                key={type}
+                                onClick={() => setChartType(type)}
+                                className={cn(
+                                    "flex h-[22px] w-6 items-center justify-center rounded transition-colors",
+                                    chartType === type ? "bg-[#161616] text-white" : "text-[#888] hover:text-white"
                                 )}
-                            </div>
-
-                            <div className="relative">
-                                <div className="rounded bg-[#0a0a0a]/80 p-1">
-                                    <ToolButton
-                                        active={showIndicators || indicators.some(i => i.enabled)}
-                                        onClick={() => setShowIndicators(!showIndicators)}
-                                    >
-                                        <Activity size={11} strokeWidth={1.5} />
-                                    </ToolButton>
-                                </div>
-                                {showIndicators && (
-                                    <div className="absolute left-full top-0 ml-1 w-28 rounded bg-[#0a0a0a]/95 p-1">
-                                        {indicators.map((ind, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => toggleIndicator(idx)}
-                                                className={cn(
-                                                    "flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-[9px] transition-colors",
-                                                    ind.enabled ? "bg-[#151515] text-white" : "text-[#555] hover:text-[#888]"
-                                                )}
-                                            >
-                                                <Circle size={5} fill={ind.enabled ? ind.color : "transparent"} stroke={ind.color} strokeWidth={2} />
-                                                {ind.type.toUpperCase()}({ind.period})
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Watchlist Panel - Right */}
-                    <div className={cn(
-                        "flex h-full flex-col transition-all duration-200",
-                        showWatchlist ? "w-[200px]" : "w-0 overflow-hidden"
-                    )}>
-                        <div className="flex h-8 items-center justify-between px-3">
-                            <span className="text-[10px] font-semibold text-[#888]">Watchlist</span>
-                            <button onClick={() => setShowWatchlist(false)} className="text-[#444] hover:text-white">
-                                <X size={10} />
+                            >
+                                <Icon size={11} />
                             </button>
+                        ))}
+                    </div>
+
+                    {/* Interval */}
+                    <button className="flex h-6 items-center rounded-md bg-[#111] px-2 text-[10px] font-medium text-[#888] hover:text-white">
+                        2h
+                    </button>
+
+                    {/* Search */}
+                    <div className="flex h-6 items-center gap-1.5 rounded-md bg-[#111] px-2">
+                        <Search size={11} className="text-[#444]" />
+                        <input
+                            type="text"
+                            defaultValue="SPX"
+                            className="w-12 bg-transparent text-[11px] text-white outline-none"
+                        />
+                    </div>
+
+                    {/* Filter */}
+                    <button className="flex h-6 w-6 items-center justify-center rounded-md bg-[#111] text-[#888] hover:text-white">
+                        <Filter size={11} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {/* Portfolio Stats */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white">
+                                $39,551.76
+                                <span className="rounded bg-[#22c55e]/15 px-1 py-0.5 text-[9px] font-bold text-[#22c55e]">
+                                    5.31%
+                                </span>
+                            </div>
+                            <span className="text-[8px] text-[#444]">Unified Trading, USD</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto px-1.5">
-                            {WATCHLIST.map((item) => (
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white">
+                                $7,960.11
+                                <span className="rounded bg-[#ef4444]/15 px-1 py-0.5 text-[9px] font-bold text-[#ef4444]">
+                                    0.69%
+                                </span>
+                            </div>
+                            <span className="text-[8px] text-[#444]">Funding, USD</span>
+                        </div>
+                    </div>
+
+                    {/* Avatar */}
+                    <div className="h-6 w-6 overflow-hidden rounded-full bg-gradient-to-br from-pink-500 to-purple-500">
+                        <img
+                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face"
+                            alt=""
+                            className="h-full w-full object-cover"
+                        />
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="relative flex flex-1 overflow-hidden">
+                {/* Chart Area */}
+                <div className="relative flex-1">
+                    <Chart
+                        ref={chartRef}
+                        data={candles}
+                        chartType={chartType}
+                        indicators={indicators}
+                        drawingTool={drawingTool}
+                        onDrawingChange={handleDrawingChange}
+                        onDrawingSelect={handleDrawingSelect}
+                        width={chartDimensions.width}
+                        height={chartDimensions.height}
+                    />
+
+                    {/* Chart Tools - Left */}
+                    <div className="absolute left-2 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-0.5 rounded-lg bg-[#111] p-1">
+                        <ToolButton>
+                            <MoreVertical size={12} />
+                        </ToolButton>
+                        {DRAWING_TOOLS.slice(0, 5).map(({ tool, icon: Icon }) => (
+                            <ToolButton
+                                key={tool ?? "select"}
+                                active={drawingTool === tool}
+                                onClick={() => setDrawingTool(tool)}
+                            >
+                                <Icon size={12} />
+                            </ToolButton>
+                        ))}
+                        {drawings.length > 0 && (
+                            <ToolButton onClick={handleClearDrawings} className="text-[#ef4444]/50 hover:text-[#ef4444]">
+                                <Trash2 size={12} />
+                            </ToolButton>
+                        )}
+                    </div>
+
+                    {/* Timeframe Bar - Bottom Center */}
+                    <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg bg-[#111] p-1">
+                        {TIMEFRAMES.map((tf) => (
+                            <button
+                                key={tf}
+                                onClick={() => setTimeframe(tf)}
+                                className={cn(
+                                    "rounded px-2 py-1 text-[9px] font-medium transition-colors",
+                                    timeframe === tf ? "bg-[#161616] text-white" : "text-[#888] hover:text-white"
+                                )}
+                            >
+                                {tf}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sidebar */}
+                {sidebarVisible && <Sidebar />}
+            </main>
+
+            {/* Bottom Panel */}
+            <BottomPanel />
+
+            {/* Scripting Panel */}
+            {showScripting && (
+                <div className="relative z-40 flex h-[140px] flex-shrink-0 bg-[#111]">
+                    <div className="flex flex-1 flex-col">
+                        {/* Scripting Header */}
+                        <div className="flex h-7 items-center justify-between px-3">
+                            <div className="flex items-center gap-2">
+                                <Terminal size={10} className="text-[#444]" />
+                                <span className="text-[10px] font-medium text-[#666]">Scripting</span>
+                            </div>
+                            <div className="flex items-center gap-1">
                                 <button
-                                    key={item.symbol}
-                                    onClick={() => setActiveSymbol(item)}
-                                    className={cn(
-                                        "flex w-full items-center gap-1.5 rounded px-2 py-1.5 transition-colors",
-                                        activeSymbol.symbol === item.symbol ? "bg-[#111]" : "hover:bg-[#0a0a0a]"
-                                    )}
+                                    onClick={runScript}
+                                    className="flex items-center gap-1 rounded bg-[#22c55e]/20 px-2 py-0.5 text-[9px] font-medium text-[#22c55e] hover:bg-[#22c55e]/30"
                                 >
-                                    <div className={cn(
-                                        "h-1 w-1 rounded-full",
-                                        item.change >= 0 ? "bg-[#22c55e]" : "bg-[#ef4444]"
-                                    )} />
-                                    <span className="flex-1 text-left text-[10px] font-medium text-white">{item.symbol}</span>
-                                    <span className={cn(
-                                        "text-[9px] tabular-nums",
-                                        item.change >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
-                                    )}>
-                                        {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
-                                    </span>
+                                    <Play size={9} /> Run
                                 </button>
-                            ))}
+                                <button onClick={() => setShowScripting(false)} className="text-[#444] hover:text-white">
+                                    <ChevronDown size={12} />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </main>
 
-                {/* Scripting Panel */}
-                {showScripting && (
-                    <div className="relative z-40 flex h-[140px] flex-shrink-0 bg-[#080808]/95">
-                        <div className="flex flex-1 flex-col">
-                            {/* Scripting Header */}
-                            <div className="flex h-7 items-center justify-between px-3">
-                                <div className="flex items-center gap-2">
-                                    <Terminal size={10} className="text-[#444]" />
-                                    <span className="text-[10px] font-medium text-[#666]">Scripting</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={runScript}
-                                        className="flex items-center gap-1 rounded bg-[#22c55e]/20 px-2 py-0.5 text-[9px] font-medium text-[#22c55e] hover:bg-[#22c55e]/30"
-                                    >
-                                        <Play size={9} /> Run
-                                    </button>
-                                    <button onClick={() => setShowScripting(false)} className="text-[#444] hover:text-white">
-                                        <ChevronDown size={12} />
-                                    </button>
-                                </div>
+                        <div className="flex flex-1 overflow-hidden">
+                            {/* Syntax Highlighted Editor */}
+                            <div className="relative flex-1 overflow-hidden">
+                                {/* Highlighted overlay */}
+                                <pre className="pointer-events-none absolute inset-0 overflow-auto p-2 font-mono text-[10px] leading-relaxed">
+                                    {tokenize(scriptCode).map((token, i) => (
+                                        <span key={i} style={{ color: TOKEN_COLORS[token.type] }}>
+                                            {token.value}
+                                        </span>
+                                    ))}
+                                    <span> </span>
+                                </pre>
+                                {/* Invisible textarea for input */}
+                                <textarea
+                                    value={scriptCode}
+                                    onChange={(e) => setScriptCode(e.target.value)}
+                                    spellCheck={false}
+                                    className="absolute inset-0 h-full w-full resize-none bg-transparent p-2 font-mono text-[10px] leading-relaxed text-transparent caret-white outline-none"
+                                    style={{ caretColor: "#888" }}
+                                    placeholder="// Write your script here..."
+                                />
                             </div>
 
-                            <div className="flex flex-1 overflow-hidden">
-                                {/* Syntax Highlighted Editor */}
-                                <div className="relative flex-1 overflow-hidden">
-                                    {/* Highlighted overlay */}
-                                    <pre className="pointer-events-none absolute inset-0 overflow-auto p-2 font-mono text-[10px] leading-relaxed">
-                                        {tokenize(scriptCode).map((token, i) => (
-                                            <span key={i} style={{ color: TOKEN_COLORS[token.type] }}>
-                                                {token.value}
-                                            </span>
-                                        ))}
-                                        {/* Extra space for cursor at end */}
-                                        <span> </span>
-                                    </pre>
-                                    {/* Invisible textarea for input */}
-                                    <textarea
-                                        value={scriptCode}
-                                        onChange={(e) => setScriptCode(e.target.value)}
-                                        spellCheck={false}
-                                        className="absolute inset-0 h-full w-full resize-none bg-transparent p-2 font-mono text-[10px] leading-relaxed text-transparent caret-white outline-none"
-                                        style={{ caretColor: "#888" }}
-                                        placeholder="// Write your script here..."
-                                    />
-                                </div>
-
-                                {/* Output */}
-                                <div className="w-[280px] overflow-auto bg-[#050505]/50 p-2">
-                                    <div className="mb-1 text-[8px] uppercase tracking-wide text-[#333]">Output</div>
-                                    <pre className="font-mono text-[9px] leading-relaxed text-[#22c55e]">
-                                        {scriptOutput || "// Run script to see output"}
-                                    </pre>
-                                </div>
+                            {/* Output */}
+                            <div className="w-[280px] overflow-auto bg-[#0a0a0a] p-2">
+                                <div className="mb-1 text-[8px] uppercase tracking-wide text-[#333]">Output</div>
+                                <pre className="font-mono text-[9px] leading-relaxed text-[#22c55e]">
+                                    {scriptOutput || "// Run script to see output"}
+                                </pre>
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Scripting Toggle - Bottom Right */}
+            {!showScripting && (
+                <button
+                    onClick={() => setShowScripting(true)}
+                    className="fixed bottom-3 right-3 z-50 flex items-center gap-1.5 rounded-lg bg-[#111] px-3 py-1.5 text-[10px] text-[#888] hover:text-white"
+                >
+                    <Terminal size={12} />
+                    <span>Scripting</span>
+                    <ChevronUp size={10} />
+                </button>
+            )}
+
+            {/* Gadget Add Button - Top Right of Chart */}
+            <div className="absolute right-[252px] top-12 z-10">
+                <GadgetAddMenu />
             </div>
+        </div>
+    );
+}
+
+export default function TradingApp() {
+    return (
+        <TooltipProvider delayDuration={200}>
+            <LayoutProvider
+                initialGadgets={[
+                    { type: "symbol" },
+                    { type: "performance" },
+                    { type: "technicals" },
+                    { type: "watchlist" },
+                    { type: "screener", zone: "bottom" },
+                ]}
+            >
+                <TradingAppContent />
+            </LayoutProvider>
         </TooltipProvider>
     );
 }

@@ -1140,15 +1140,10 @@ export class ChartEngine {
             ctx.fillStyle = color;
             ctx.fillRect(x - wickWidth / 2, highY, wickWidth, lowY - highY);
 
-            // Body with rounded corners.
+            // Body.
             const bodyTop = Math.min(openY, closeY);
             const bodyHeight = Math.max(Math.abs(closeY - openY), 1);
-            const bodyX = x - candleWidth / 2;
-            const radius = Math.min(3, candleWidth / 2, bodyHeight / 2);
-
-            ctx.beginPath();
-            ctx.roundRect(bodyX, bodyTop, candleWidth, bodyHeight, radius);
-            ctx.fill();
+            ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
         }
     }
 
