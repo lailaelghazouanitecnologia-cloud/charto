@@ -712,9 +712,12 @@ export class ChartEngine {
     render(): void {
         const { ctx } = this;
 
-        // Clear.
-        ctx.fillStyle = this.config.backgroundColor;
-        ctx.fillRect(0, 0, this.config.width, this.config.height);
+        // Clear canvas first (required for transparent backgrounds).
+        ctx.clearRect(0, 0, this.config.width, this.config.height);
+        if (this.config.backgroundColor !== "transparent") {
+            ctx.fillStyle = this.config.backgroundColor;
+            ctx.fillRect(0, 0, this.config.width, this.config.height);
+        }
 
         // Draw grid.
         this.drawGrid();
@@ -945,8 +948,11 @@ export class ChartEngine {
         const { ctx } = this;
         const { yAxis, chart } = this.layout;
 
-        ctx.fillStyle = this.config.backgroundColor;
-        ctx.fillRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
+        ctx.clearRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
+        if (this.config.backgroundColor !== "transparent") {
+            ctx.fillStyle = this.config.backgroundColor;
+            ctx.fillRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
+        }
 
         ctx.fillStyle = "#888888";
         ctx.font = "11px monospace";
@@ -969,8 +975,11 @@ export class ChartEngine {
         const { ctx } = this;
         const { xAxis } = this.layout;
 
-        ctx.fillStyle = this.config.backgroundColor;
-        ctx.fillRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
+        ctx.clearRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
+        if (this.config.backgroundColor !== "transparent") {
+            ctx.fillStyle = this.config.backgroundColor;
+            ctx.fillRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
+        }
 
         ctx.fillStyle = "#888888";
         ctx.font = "11px monospace";
