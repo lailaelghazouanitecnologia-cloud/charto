@@ -7,6 +7,7 @@ import { IndicatorControls, PRESET_INDICATORS } from "./components/IndicatorCont
 import { DrawingControls } from "./components/DrawingControls.tsx";
 import { TimeRangeSelector, TIME_RANGES, type TimeRange, calculateVisibleRange } from "./components/TimeRangeSelector.tsx";
 import { Button } from "./components/ui/button.tsx";
+import { TooltipProvider } from "./components/ui/tooltip.tsx";
 import { cn } from "./lib/utils.ts";
 import type { Candle } from "./core/types.ts";
 import type { IndicatorConfig } from "./core/chart.ts";
@@ -230,6 +231,7 @@ export default function TradingApp() {
         : 0;
 
     return (
+        <TooltipProvider>
         <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#0a0a0f] text-zinc-100">
             {/* Header */}
             <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800/50 bg-[#0f0f14] px-4">
@@ -304,11 +306,11 @@ export default function TradingApp() {
                             </div>
                             <div className="space-y-0.5">
                                 {filteredWatchlist.map((item) => (
-                                    <button
+                                    <div
                                         key={item.symbol}
                                         onClick={() => setActiveSymbol(item)}
                                         className={cn(
-                                            "group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
+                                            "group flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
                                             activeSymbol.symbol === item.symbol
                                                 ? "bg-blue-500/10 text-blue-400"
                                                 : "hover:bg-zinc-800/50"
@@ -321,7 +323,7 @@ export default function TradingApp() {
                                                     toggleFavorite(item.symbol);
                                                 }}
                                                 className={cn(
-                                                    "text-zinc-600 transition-colors",
+                                                    "text-zinc-600 transition-colors hover:scale-110",
                                                     favorites.has(item.symbol) ? "text-yellow-500" : "group-hover:text-zinc-400"
                                                 )}
                                             >
@@ -343,7 +345,7 @@ export default function TradingApp() {
                                                 {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
                                             </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -451,5 +453,6 @@ export default function TradingApp() {
                 </div>
             </footer>
         </div>
+        </TooltipProvider>
     );
 }
