@@ -19,6 +19,12 @@
  * - Snapshot/export (PNG, JPEG, clipboard)
  * - Specialized drawers (histogram, scatter, volume profile, bid-ask spread)
  * - Advanced viewport model with history/undo
+ * - Hit-test system for pixel-perfect interaction detection
+ * - Financial events (earnings, dividends, splits, conference calls)
+ * - Centralized input listener with gesture recognition
+ * - Drag-n-drop system with constraints
+ * - Pane resizer for multi-pane layouts
+ * - Data series management with caching and viewport views
  */
 
 // ============================================================================
@@ -480,3 +486,140 @@ export {
     type ZoomOptions,
     type PanOptions,
 } from "../core/viewport-model.ts";
+
+// ============================================================================
+// Hit-Test System
+// ============================================================================
+
+export {
+    HitTestCanvas,
+    HitTestManager,
+    BoundsHitTest,
+    createHitTestCanvas,
+    createHitTestManager,
+    createBoundsHitTest,
+    isPointNearLineSegment,
+    isPointNearHorizontalLine,
+    isPointInCircle,
+    createDrawingHitTestElement,
+    createEventHitTestElement,
+    createCandleHitTestElement,
+    HIT_TEST_ID_RANGES,
+    DEFAULT_HIT_TEST_CONFIG,
+    type HitTestElementType,
+    type HitTestElement,
+    type HitTestResult,
+    type HitTestSubscriber,
+    type HitTestConfig,
+} from "../core/hit-test.ts";
+
+// ============================================================================
+// Financial Events (Earnings, Dividends, Splits)
+// ============================================================================
+
+export {
+    Events,
+    createEvents,
+    createEarningsEvent,
+    createDividendEvent,
+    createSplitEvent,
+    createConferenceCallEvent,
+    createCustomEvent,
+    EVENT_COLORS,
+    DEFAULT_MARKER_CONFIG,
+    DEFAULT_TOOLTIP_CONFIG,
+    DEFAULT_EVENTS_CONFIG,
+    type EventType,
+    type EventMarkerShape,
+    type ChartEvent,
+    type EventWithPosition,
+    type EventMarkerConfig,
+    type EventsConfig,
+    type EventTooltipConfig,
+    type EventsState,
+    type EventsCallbacks,
+} from "../core/events.ts";
+
+// ============================================================================
+// Input Listener
+// ============================================================================
+
+export {
+    InputListener,
+    createInputListener,
+    DEFAULT_INPUT_CONFIG,
+    type InputPosition,
+    type MouseInputEvent,
+    type TouchInputEvent,
+    type WheelInputEvent,
+    type KeyboardInputEvent,
+    type InputEvent,
+    type InputListenerCallbacks,
+    type InputListenerConfig,
+} from "../core/input-listener.ts";
+
+// ============================================================================
+// Drag-n-Drop System
+// ============================================================================
+
+export {
+    DragHandler,
+    HorizontalDragHandler,
+    VerticalDragHandler,
+    DragManager,
+    createDragHandler,
+    createHorizontalDragHandler,
+    createVerticalDragHandler,
+    createDragManager,
+    shouldStartDrag,
+    constrainToBounds,
+    snapToGrid,
+    DEFAULT_DRAG_CONFIG,
+    type DragDirection,
+    type DragState,
+    type DragConstraints,
+    type DragConfig,
+    type DragCallbacks,
+    type DragInfo,
+    type DragManagerCallbacks,
+} from "../core/drag-drop.ts";
+
+// ============================================================================
+// Pane Resizer
+// ============================================================================
+
+export {
+    PaneResizer,
+    PaneLayoutManager,
+    createPaneResizer,
+    createPaneLayoutManager,
+    DEFAULT_RESIZER_CONFIG,
+    DEFAULT_PANE_LAYOUT_CONFIG,
+    type PaneInfo,
+    type ResizerConfig,
+    type ResizerState,
+    type ResizerInstance,
+    type ResizerCallbacks,
+    type PaneLayoutConfig,
+} from "../core/pane-resizer.ts";
+
+// ============================================================================
+// Data Series
+// ============================================================================
+
+export {
+    DataSeries,
+    CandleSeries,
+    LineSeries,
+    MultiSeriesManager,
+    createCandleSeries,
+    createLineSeries,
+    createMultiSeriesManager,
+    type TimeSeriesPoint,
+    type OHLCPoint,
+    type DataSeriesConfig,
+    type DataSeriesState,
+    type ViewportRange,
+    type DataSeriesView,
+    type MultiSeriesConfig,
+} from "../core/data-series.ts";
