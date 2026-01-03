@@ -704,7 +704,7 @@ export class ChartEngine {
         }
 
         ctx.closePath();
-        ctx.fillStyle = "rgba(96, 165, 250, 0.1)";
+        ctx.fillStyle = "rgba(34, 197, 94, 0.08)";
         ctx.fill();
     }
 
@@ -841,8 +841,8 @@ export class ChartEngine {
         const start = Math.floor(this.viewport.startIndex);
         const end = Math.ceil(this.viewport.endIndex);
 
-        ctx.strokeStyle = "#4fc3f7";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#22c55e";
+        ctx.lineWidth = 1.5;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
 
@@ -906,8 +906,8 @@ export class ChartEngine {
 
         // Gradient fill.
         const gradient = ctx.createLinearGradient(0, chart.y, 0, chart.y + chart.height);
-        gradient.addColorStop(0, "rgba(79, 195, 247, 0.4)");
-        gradient.addColorStop(1, "rgba(79, 195, 247, 0.05)");
+        gradient.addColorStop(0, "rgba(34, 197, 94, 0.25)");
+        gradient.addColorStop(1, "rgba(34, 197, 94, 0.02)");
         ctx.fillStyle = gradient;
         ctx.fill();
 
@@ -954,8 +954,8 @@ export class ChartEngine {
             ctx.fillRect(yAxis.x, yAxis.y, yAxis.width, yAxis.height);
         }
 
-        ctx.fillStyle = "#888888";
-        ctx.font = "11px monospace";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.font = "10px monospace";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
@@ -981,8 +981,8 @@ export class ChartEngine {
             ctx.fillRect(xAxis.x, xAxis.y, xAxis.width, xAxis.height);
         }
 
-        ctx.fillStyle = "#888888";
-        ctx.font = "11px monospace";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.font = "10px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
 
@@ -1006,8 +1006,8 @@ export class ChartEngine {
         const { ctx } = this;
         const { chart, yAxis, xAxis } = this.layout;
 
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = "#666666";
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
         ctx.lineWidth = 1;
 
         // Vertical line.
@@ -1026,10 +1026,10 @@ export class ChartEngine {
 
         // Price label.
         const priceLabel = this.crosshair.price.toFixed(2);
-        ctx.fillStyle = "#333333";
+        ctx.fillStyle = "#111111";
         ctx.fillRect(yAxis.x, this.crosshair.y - 10, yAxis.width - 4, 20);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "11px monospace";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.font = "10px monospace";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(priceLabel, yAxis.x + 8, this.crosshair.y);
@@ -1041,9 +1041,9 @@ export class ChartEngine {
             const timeLabel = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 
             const labelWidth = 50;
-            ctx.fillStyle = "#333333";
+            ctx.fillStyle = "#111111";
             ctx.fillRect(this.crosshair.x - labelWidth / 2, xAxis.y + 2, labelWidth, 18);
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.fillText(timeLabel, this.crosshair.x, xAxis.y + 6);

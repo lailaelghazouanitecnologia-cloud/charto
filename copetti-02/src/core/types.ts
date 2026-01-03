@@ -49,8 +49,8 @@ export interface ChartConfig {
 export const DEFAULT_CONFIG: ChartConfig = {
     width: 800,
     height: 400,
-    backgroundColor: "#0f0f14",
-    gridColor: "#1a1a24",
-    upColor: "#26a69a",
-    downColor: "#ef5350",
+    backgroundColor: "transparent",
+    gridColor: "rgba(255, 255, 255, 0.04)",
+    upColor: "#22c55e",
+    downColor: "#ef4444",
 } as const;
