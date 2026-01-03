@@ -840,7 +840,9 @@ export class ChartEngine {
                 this.drawBollingerFill(bb);
             } else {
                 const points = data as IndicatorPoint[];
-                this.drawIndicatorLine(points, indicator.color, 1.5);
+                // Use gradient for SMA lines.
+                const useGradient = indicator.type === "sma";
+                this.drawIndicatorLine(points, indicator.color, 1.5, false, useGradient);
             }
         }
     }
@@ -851,14 +853,27 @@ export class ChartEngine {
         color: ColorHex,
         lineWidth: number,
         dashed: boolean = false,
+        useGradient: boolean = false,
     ): void {
         if (points.length < 2) return;
 
         const { ctx } = this;
+        const { chart } = this.layout;
         const start = Math.floor(this.viewport.startIndex);
         const end = Math.ceil(this.viewport.endIndex);
 
-        ctx.strokeStyle = color;
+        // Create gradient if requested.
+        if (useGradient) {
+            const gradient = ctx.createLinearGradient(chart.x, 0, chart.x + chart.width, 0);
+            gradient.addColorStop(0, color + "40"); // 25% opacity start
+            gradient.addColorStop(0.3, color);
+            gradient.addColorStop(0.7, color);
+            gradient.addColorStop(1, color + "40"); // 25% opacity end
+            ctx.strokeStyle = gradient;
+        } else {
+            ctx.strokeStyle = color;
+        }
+
         ctx.lineWidth = lineWidth;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
@@ -1125,10 +1140,15 @@ export class ChartEngine {
             ctx.fillStyle = color;
             ctx.fillRect(x - wickWidth / 2, highY, wickWidth, lowY - highY);
 
-            // Body.
+            // Body with rounded corners.
             const bodyTop = Math.min(openY, closeY);
             const bodyHeight = Math.max(Math.abs(closeY - openY), 1);
-            ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+            const bodyX = x - candleWidth / 2;
+            const radius = Math.min(3, candleWidth / 2, bodyHeight / 2);
+
+            ctx.beginPath();
+            ctx.roundRect(bodyX, bodyTop, candleWidth, bodyHeight, radius);
+            ctx.fill();
         }
     }
 
