@@ -88,8 +88,8 @@ export const Chart = forwardRef<ChartRef, ChartProps>(function Chart({
         const chart = createChart(canvasRef.current, {
             width,
             height,
-            backgroundColor: "#0a0a0f",
-            gridColor: "#1a1a24",
+            backgroundColor: "transparent",
+            gridColor: "rgba(255,255,255,0.04)",
             upColor: "#22c55e",
             downColor: "#ef4444",
         });
