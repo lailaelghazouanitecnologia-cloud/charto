@@ -32,6 +32,7 @@ import {
     drawMACDPane,
     type PaneIndicatorType,
 } from "./pane.ts";
+import { ViewportAnimation, Easing, type EasingFunction } from "./animation.ts";
 
 /** Indicator configuration. */
 export interface IndicatorConfig {
@@ -135,6 +136,10 @@ export class ChartEngine {
     private macdData: { macd: number[]; signal: number[]; histogram: number[] } = { macd: [], signal: [], histogram: [] };
     private showRSI = false;
     private showMACD = false;
+
+    // Animation.
+    private viewportAnimation: ViewportAnimation | null = null;
+    private animationsEnabled = true;
 
     constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}, theme: ChartTheme = DARK_THEME) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -474,6 +479,48 @@ export class ChartEngine {
         this.scheduleRender();
     }
 
+    /** Update the last candle (for real-time streaming). */
+    updateLastCandle(candle: Candle): void {
+        if (this.candles.length === 0) {
+            this.candles.push(candle);
+        } else {
+            const last = this.candles[this.candles.length - 1]!;
+            if (last.timestamp === candle.timestamp) {
+                // Update existing candle.
+                this.candles[this.candles.length - 1] = candle;
+            } else {
+                // New candle - append it.
+                this.candles.push(candle);
+                // Auto-scroll to show new candle.
+                if (this.viewport.endIndex === this.candles.length - 2) {
+                    this.viewport.startIndex++;
+                    this.viewport.endIndex++;
+                }
+            }
+        }
+        this.updatePriceRange();
+        this.updateScales();
+        this.scheduleRender();
+    }
+
+    /** Append a completed candle. */
+    appendCandle(candle: Candle): void {
+        this.candles.push(candle);
+
+        // Auto-scroll if viewing latest candles.
+        const wasAtEnd = this.viewport.endIndex >= this.candles.length - 2;
+        if (wasAtEnd) {
+            this.viewport.startIndex++;
+            this.viewport.endIndex++;
+        }
+
+        this.updatePriceRange();
+        this.updateScales();
+        this.recalculateIndicators();
+        this.recalculatePaneIndicators();
+        this.scheduleRender();
+    }
+
     /** Set chart type. */
     setChartType(type: ChartType): void {
         this.chartType = type;
@@ -492,6 +539,69 @@ export class ChartEngine {
         this.updatePriceRange();
         this.updateScales();
         this.scheduleRender();
+    }
+
+    /** Animate to a specific viewport. */
+    animateToViewport(
+        target: Viewport,
+        duration: number = 300,
+        easing: EasingFunction = Easing.easeOutCubic,
+    ): void {
+        // Stop any existing animation.
+        if (this.viewportAnimation) {
+            this.viewportAnimation.stop();
+        }
+
+        if (!this.animationsEnabled) {
+            // Skip animation, apply directly.
+            this.viewport = { ...target };
+            this.updateScales();
+            this.scheduleRender();
+            return;
+        }
+
+        this.viewportAnimation = new ViewportAnimation({
+            from: { ...this.viewport },
+            to: target,
+            duration,
+            easing,
+            onUpdate: (value) => {
+                this.viewport = value;
+                this.updateScales();
+                this.scheduleRender();
+            },
+            onComplete: () => {
+                this.viewportAnimation = null;
+            },
+        });
+
+        this.viewportAnimation.start();
+    }
+
+    /** Scroll to show the latest candles with animation. */
+    scrollToEnd(animated: boolean = true): void {
+        const count = this.candles.length;
+        const visibleCandles = this.viewport.endIndex - this.viewport.startIndex;
+        const target: Viewport = {
+            startIndex: Math.max(0, count - visibleCandles - 1),
+            endIndex: count - 1,
+            minPrice: this.viewport.minPrice,
+            maxPrice: this.viewport.maxPrice,
+        };
+
+        if (animated && this.animationsEnabled) {
+            this.animateToViewport(target);
+        } else {
+            this.viewport = target;
+            this.updatePriceRange();
+            this.updateScales();
+            this.scheduleRender();
+        }
+    }
+
+    /** Enable or disable animations. */
+    setAnimationsEnabled(enabled: boolean): void {
+        this.animationsEnabled = enabled;
     }
 
     /** Set callbacks. */
