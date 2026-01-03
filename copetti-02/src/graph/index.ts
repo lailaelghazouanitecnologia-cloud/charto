@@ -11,6 +11,14 @@
  * - Touch/gesture support for mobile
  * - Animation utilities
  * - React hooks for easy integration
+ * - Event bus for pub/sub communication
+ * - Navigation map (mini-chart) for overview
+ * - Watermark for branding/symbol display
+ * - High/Low price labels
+ * - Market session highlights (pre-market, after-hours, forex sessions)
+ * - Snapshot/export (PNG, JPEG, clipboard)
+ * - Specialized drawers (histogram, scatter, volume profile, bid-ask spread)
+ * - Advanced viewport model with history/undo
  */
 
 // ============================================================================
@@ -302,3 +310,173 @@ export {
     useDrawingTool,
     useChartEngine,
 } from "./hooks.ts";
+
+// ============================================================================
+// Event Bus (Pub/Sub System)
+// ============================================================================
+
+export {
+    EventBus,
+    getGlobalEventBus,
+    createEventBus,
+    mergeEventBuses,
+    fromDOMEvents,
+    type EventCallback,
+    type UnsubscribeFn,
+    type EventSubscription,
+    type ChartEvents,
+} from "../core/event-bus.ts";
+
+// ============================================================================
+// Navigation Map (Mini-chart)
+// ============================================================================
+
+export {
+    NavigationMap,
+    createNavigationMap,
+    DEFAULT_NAVIGATION_MAP_CONFIG,
+    type NavigationMapConfig,
+    type NavigationMapState,
+    type NavigationMapCallbacks,
+} from "../core/navigation-map.ts";
+
+// ============================================================================
+// Watermark
+// ============================================================================
+
+export {
+    Watermark,
+    createWatermark,
+    drawWatermark,
+    drawSymbolWatermark,
+    DEFAULT_WATERMARK_CONFIG,
+    type WatermarkPosition,
+    type WatermarkTextConfig,
+    type WatermarkImageConfig,
+    type WatermarkSymbolConfig,
+    type WatermarkContent,
+    type WatermarkConfig,
+    type WatermarkState,
+} from "../core/watermark.ts";
+
+// ============================================================================
+// High/Low Labels
+// ============================================================================
+
+export {
+    HighLow,
+    createHighLow,
+    findHighLow,
+    drawHighLowMarkers,
+    DEFAULT_HIGH_LOW_CONFIG,
+    type HighLowConfig,
+    type HighLowPoint,
+    type HighLowState,
+} from "../core/high-low.ts";
+
+// ============================================================================
+// Highlights (Market Sessions)
+// ============================================================================
+
+export {
+    Highlights,
+    createHighlights,
+    createEventHighlight,
+    isInSession,
+    getActiveSessions,
+    drawSessionHighlights,
+    US_MARKET_SESSIONS,
+    FOREX_SESSIONS,
+    CRYPTO_SESSIONS,
+    DEFAULT_HIGHLIGHTS_CONFIG,
+    type MarketSession,
+    type TimeRange,
+    type HighlightZone,
+    type HighlightsConfig,
+    type HighlightsState,
+} from "../core/highlights.ts";
+
+// ============================================================================
+// Snapshot (Export)
+// ============================================================================
+
+export {
+    Snapshot,
+    createSnapshot,
+    captureCanvas,
+    downloadCanvas,
+    copyCanvasToClipboard,
+    createPrintSnapshot,
+    createThumbnail,
+    DEFAULT_SNAPSHOT_CONFIG,
+    type SnapshotFormat,
+    type SnapshotConfig,
+    type SnapshotResult,
+} from "../core/snapshot.ts";
+
+// ============================================================================
+// Specialized Drawers
+// ============================================================================
+
+export {
+    // Histogram
+    drawHistogram,
+    DEFAULT_HISTOGRAM_CONFIG,
+    type HistogramBar,
+    type HistogramConfig,
+
+    // Scatter Plot
+    drawScatterPlot,
+    DEFAULT_SCATTER_CONFIG,
+    type ScatterPoint,
+    type ScatterConfig,
+
+    // Difference Cloud
+    drawDifferenceCloud,
+    DEFAULT_DIFFERENCE_CLOUD_CONFIG,
+    type DifferenceCloudPoint,
+    type DifferenceCloudConfig,
+
+    // Trend Histogram
+    drawTrendHistogram,
+    DEFAULT_TREND_HISTOGRAM_CONFIG,
+    type TrendHistogramBar,
+    type TrendHistogramConfig,
+
+    // Volume Profile
+    drawVolumeProfile,
+    DEFAULT_VOLUME_PROFILE_CONFIG,
+    type VolumeProfileBar,
+    type VolumeProfileConfig,
+
+    // Bid/Ask Spread
+    drawBidAskSpread,
+    DEFAULT_BID_ASK_CONFIG,
+    type BidAskPoint,
+    type BidAskConfig,
+
+    // Range Bars
+    drawRangeBars,
+    DEFAULT_RANGE_BAR_CONFIG,
+    type RangeBar,
+    type RangeBarConfig,
+
+    // Drawer Context
+    type DrawerContext,
+} from "../core/drawers.ts";
+
+// ============================================================================
+// Viewport Model
+// ============================================================================
+
+export {
+    ViewportModel,
+    createViewportModel,
+    DEFAULT_VIEWPORT_CONSTRAINTS,
+    DEFAULT_VIEWPORT_CONFIG,
+    type ViewportState,
+    type ViewportConstraints,
+    type ViewportConfig,
+    type ZoomOptions,
+    type PanOptions,
+} from "../core/viewport-model.ts";
