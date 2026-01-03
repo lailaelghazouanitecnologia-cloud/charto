@@ -17,6 +17,9 @@ export * from "./core/crosshair.ts";
 export * from "./core/indicators.ts";
 export * from "./core/drawing.ts";
 export * from "./core/chart.ts";
+export * from "./core/streaming.ts";
+export * from "./core/theme.ts";
+export * from "./core/measure.ts";
 
 // UI components (shadcn-style).
 export * from "./components/ui/index.ts";

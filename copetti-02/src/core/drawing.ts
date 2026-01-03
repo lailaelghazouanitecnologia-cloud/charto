@@ -6,7 +6,7 @@
 import type { Pixel, ColorHex, Point } from "./types.ts";
 
 /** Drawing tool types. */
-export type DrawingToolType = "trendline" | "horizontal" | "ray" | "rectangle" | "fibonacci";
+export type DrawingToolType = "trendline" | "horizontal" | "ray" | "rectangle" | "fibonacci" | "measure";
 
 /** Drawing state. */
 export type DrawingState = "idle" | "drawing" | "complete";

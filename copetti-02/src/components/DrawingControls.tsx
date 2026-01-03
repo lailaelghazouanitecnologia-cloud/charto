@@ -83,6 +83,20 @@ const DRAWING_TOOLS: DrawingToolOption[] = [
             </svg>
         ),
     },
+    {
+        type: "measure",
+        label: "Measure",
+        description: "Measure price and time distance",
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 20L20 4" />
+                <path d="M4 20v-6" />
+                <path d="M4 20h6" />
+                <path d="M20 4v6" />
+                <path d="M20 4h-6" />
+            </svg>
+        ),
+    },
 ];
 
 export function DrawingControls({
