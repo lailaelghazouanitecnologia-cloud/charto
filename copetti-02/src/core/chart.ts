@@ -24,6 +24,14 @@ import {
     type DrawingToolType,
     type AnyDrawing,
 } from "./drawing.ts";
+import {
+    PaneManager,
+    calculateRSI,
+    calculateMACD,
+    drawRSIPane,
+    drawMACDPane,
+    type PaneIndicatorType,
+} from "./pane.ts";
 
 /** Indicator configuration. */
 export interface IndicatorConfig {
@@ -121,6 +129,13 @@ export class ChartEngine {
     private drawingManager: DrawingManager = new DrawingManager();
     private isDrawing = false;
 
+    // Multi-pane system for indicators.
+    private paneManager: PaneManager = new PaneManager();
+    private rsiData: number[] = [];
+    private macdData: { macd: number[]; signal: number[]; histogram: number[] } = { macd: [], signal: [], histogram: [] };
+    private showRSI = false;
+    private showMACD = false;
+
     constructor(element: HTMLCanvasElement, config: Partial<ChartConfig> = {}, theme: ChartTheme = DARK_THEME) {
         this.config = { ...DEFAULT_CONFIG, ...config };
         this.theme = theme;
@@ -141,16 +156,21 @@ export class ChartEngine {
         const volumeHeight = 60;
         const padding = 10;
 
+        // Calculate indicator pane heights.
+        const rsiHeight = this.showRSI ? 80 : 0;
+        const macdHeight = this.showMACD ? 80 : 0;
+        const indicatorHeight = rsiHeight + macdHeight;
+
         this.layout = {
             chart: {
                 x: padding,
                 y: padding,
                 width: w - yAxisWidth - padding * 2,
-                height: h - xAxisHeight - volumeHeight - padding * 2,
+                height: h - xAxisHeight - volumeHeight - indicatorHeight - padding * 2,
             },
             volume: {
                 x: padding,
-                y: h - xAxisHeight - volumeHeight,
+                y: h - xAxisHeight - volumeHeight - indicatorHeight,
                 width: w - yAxisWidth - padding * 2,
                 height: volumeHeight,
             },
@@ -167,6 +187,9 @@ export class ChartEngine {
                 height: h - xAxisHeight - padding,
             },
         };
+
+        // Update pane manager dimensions.
+        this.paneManager.setDimensions(w, h);
     }
 
     /** Initialize scales. */
@@ -447,6 +470,7 @@ export class ChartEngine {
         this.updatePriceRange();
         this.updateScales();
         this.recalculateIndicators();
+        this.recalculatePaneIndicators();
         this.scheduleRender();
     }
 
@@ -491,6 +515,80 @@ export class ChartEngine {
         this.indicators = indicators;
         this.recalculateIndicators();
         this.scheduleRender();
+    }
+
+    /** Toggle RSI pane. */
+    toggleRSI(show?: boolean): void {
+        this.showRSI = show ?? !this.showRSI;
+        if (this.showRSI) {
+            this.paneManager.addPane({
+                id: "rsi",
+                type: "indicator",
+                indicatorType: "rsi",
+                height: 15,
+                minHeight: 10,
+                maxHeight: 30,
+                visible: true,
+                title: "RSI(14)",
+            });
+            this.paneManager.setPaneYRange("rsi", 0, 100);
+            this.recalculatePaneIndicators();
+        } else {
+            this.paneManager.removePane("rsi");
+        }
+        this.updatePaneLayout();
+        this.scheduleRender();
+    }
+
+    /** Toggle MACD pane. */
+    toggleMACD(show?: boolean): void {
+        this.showMACD = show ?? !this.showMACD;
+        if (this.showMACD) {
+            this.paneManager.addPane({
+                id: "macd",
+                type: "indicator",
+                indicatorType: "macd",
+                height: 15,
+                minHeight: 10,
+                maxHeight: 30,
+                visible: true,
+                title: "MACD(12,26,9)",
+            });
+            this.recalculatePaneIndicators();
+        } else {
+            this.paneManager.removePane("macd");
+        }
+        this.updatePaneLayout();
+        this.scheduleRender();
+    }
+
+    /** Get RSI visibility. */
+    isRSIVisible(): boolean {
+        return this.showRSI;
+    }
+
+    /** Get MACD visibility. */
+    isMACDVisible(): boolean {
+        return this.showMACD;
+    }
+
+    /** Update pane layout dimensions. */
+    private updatePaneLayout(): void {
+        this.paneManager.setDimensions(this.config.width, this.config.height);
+        this.calculateLayout();
+    }
+
+    /** Recalculate pane indicators (RSI/MACD). */
+    private recalculatePaneIndicators(): void {
+        if (this.candles.length === 0) return;
+
+        if (this.showRSI) {
+            this.rsiData = calculateRSI(this.candles, 14);
+        }
+
+        if (this.showMACD) {
+            this.macdData = calculateMACD(this.candles, 12, 26, 9);
+        }
     }
 
     /** Set active drawing tool. */
@@ -758,6 +856,9 @@ export class ChartEngine {
 
             // Draw drawings (annotations).
             this.drawDrawings();
+
+            // Draw indicator panes (RSI/MACD).
+            this.drawIndicatorPanes();
         }
 
         // Draw axes.
@@ -780,6 +881,78 @@ export class ChartEngine {
             (price) => this.yScale.toPixel(price),
             this.layout.chart,
         );
+    }
+
+    /** Draw RSI/MACD indicator panes. */
+    private drawIndicatorPanes(): void {
+        const { ctx } = this;
+        const { volume, xAxis } = this.layout;
+        const start = Math.floor(this.viewport.startIndex);
+        const end = Math.ceil(this.viewport.endIndex);
+        const toPixelX = (index: number) => this.xScale.toPixel(index);
+
+        let currentY = volume.y + volume.height;
+        const paneHeight = 80;
+        const chartWidth = this.layout.chart.width;
+
+        // Draw RSI pane.
+        if (this.showRSI && this.rsiData.length > 0) {
+            const rsiState = this.paneManager.getPaneState("rsi");
+            if (rsiState) {
+                // Update bounds.
+                rsiState.bounds = {
+                    x: this.layout.chart.x,
+                    y: currentY,
+                    width: chartWidth,
+                    height: paneHeight,
+                };
+                rsiState.yScale.update({
+                    rangeMin: currentY + paneHeight,
+                    rangeMax: currentY,
+                });
+
+                drawRSIPane(ctx, this.rsiData, start, end, toPixelX, rsiState);
+                currentY += paneHeight;
+            }
+        }
+
+        // Draw MACD pane.
+        if (this.showMACD && this.macdData.macd.length > 0) {
+            const macdState = this.paneManager.getPaneState("macd");
+            if (macdState) {
+                // Update bounds.
+                macdState.bounds = {
+                    x: this.layout.chart.x,
+                    y: currentY,
+                    width: chartWidth,
+                    height: paneHeight,
+                };
+
+                // Auto-scale MACD.
+                let min = 0, max = 0;
+                for (let i = start; i <= end && i < this.macdData.macd.length; i++) {
+                    const m = this.macdData.macd[i];
+                    const s = this.macdData.signal[i];
+                    const h = this.macdData.histogram[i];
+                    if (m !== undefined && !isNaN(m)) { min = Math.min(min, m); max = Math.max(max, m); }
+                    if (s !== undefined && !isNaN(s)) { min = Math.min(min, s); max = Math.max(max, s); }
+                    if (h !== undefined && !isNaN(h)) { min = Math.min(min, h); max = Math.max(max, h); }
+                }
+                const padding = (max - min) * 0.1 || 1;
+
+                macdState.yScale.update({
+                    domainMin: min - padding,
+                    domainMax: max + padding,
+                    rangeMin: currentY + paneHeight,
+                    rangeMax: currentY,
+                });
+
+                const candleRange = this.viewport.endIndex - this.viewport.startIndex;
+                const barWidth = Math.max(1, (chartWidth / candleRange) * 0.6);
+
+                drawMACDPane(ctx, this.macdData, start, end, toPixelX, macdState, undefined, barWidth);
+            }
+        }
     }
 
     /** Draw grid lines. */
