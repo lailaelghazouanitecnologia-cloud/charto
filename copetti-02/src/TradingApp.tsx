@@ -19,23 +19,18 @@ import {
     CandlestickChart,
     LineChart,
     AreaChart,
-    Settings,
     Camera,
     Maximize2,
-    ChevronDown,
     Search,
     Star,
-    Plus,
-    Clock,
     Activity,
     Trash2,
-    PanelRightClose,
-    PanelRightOpen,
+    PanelRight,
     Circle,
     X,
+    ChevronRight,
 } from "lucide-react";
 
-// Generate realistic candle data
 function generateCandles(count: number, startPrice: number, symbol: string): Candle[] {
     const candles: Candle[] = [];
     let price = startPrice;
@@ -57,42 +52,61 @@ function generateCandles(count: number, startPrice: number, symbol: string): Can
     return candles;
 }
 
-// Watchlist data
 const WATCHLIST = [
     { symbol: "BTC/USD", name: "Bitcoin", price: 43250.50, change: 2.34 },
     { symbol: "ETH/USD", name: "Ethereum", price: 2280.75, change: -1.12 },
     { symbol: "SOL/USD", name: "Solana", price: 98.42, change: 5.67 },
-    { symbol: "AAPL", name: "Apple Inc.", price: 178.25, change: 0.85 },
+    { symbol: "AAPL", name: "Apple", price: 178.25, change: 0.85 },
     { symbol: "NVDA", name: "NVIDIA", price: 495.20, change: 4.15 },
     { symbol: "TSLA", name: "Tesla", price: 248.50, change: 3.21 },
-    { symbol: "META", name: "Meta", price: 355.90, change: 1.78 },
-    { symbol: "GOOGL", name: "Alphabet", price: 141.80, change: -0.32 },
 ];
 
-const TIMEFRAMES = ["1m", "5m", "15m", "1H", "4H", "1D", "1W", "1M"];
+const TIMEFRAMES = ["1m", "5m", "15m", "1H", "4H", "1D", "1W"];
 
-const CHART_TYPES: { type: ChartType; icon: typeof CandlestickChart; label: string }[] = [
-    { type: "candlestick", icon: CandlestickChart, label: "Candles" },
-    { type: "line", icon: LineChart, label: "Line" },
-    { type: "area", icon: AreaChart, label: "Area" },
+const DRAWING_TOOLS: { tool: DrawingToolType | null; icon: typeof MousePointer2 }[] = [
+    { tool: null, icon: MousePointer2 },
+    { tool: "trendline", icon: TrendingUp },
+    { tool: "horizontal", icon: Minus },
+    { tool: "ray", icon: PenLine },
+    { tool: "rectangle", icon: Square },
+    { tool: "fibonacci", icon: Ruler },
+    { tool: "measure", icon: Crosshair },
 ];
 
-const DRAWING_TOOLS: { tool: DrawingToolType | null; icon: typeof MousePointer2; label: string }[] = [
-    { tool: null, icon: MousePointer2, label: "Select" },
-    { tool: "trendline", icon: TrendingUp, label: "Trend Line" },
-    { tool: "horizontal", icon: Minus, label: "Horizontal Line" },
-    { tool: "ray", icon: PenLine, label: "Ray" },
-    { tool: "rectangle", icon: Square, label: "Rectangle" },
-    { tool: "fibonacci", icon: Ruler, label: "Fibonacci" },
-    { tool: "measure", icon: Crosshair, label: "Measure" },
+const CHART_TYPES: { type: ChartType; icon: typeof CandlestickChart }[] = [
+    { type: "candlestick", icon: CandlestickChart },
+    { type: "line", icon: LineChart },
+    { type: "area", icon: AreaChart },
 ];
 
 const PRESET_INDICATORS: IndicatorConfig[] = [
     { type: "sma", period: 20, color: "#3b82f6", enabled: false },
-    { type: "sma", period: 50, color: "#f59e0b", enabled: false },
     { type: "ema", period: 12, color: "#8b5cf6", enabled: false },
     { type: "bollinger", period: 20, color: "#06b6d4", enabled: false },
 ];
+
+// Floating toolbar button
+function ToolButton({ active, onClick, children, className }: {
+    active?: boolean;
+    onClick?: () => void;
+    children: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-xl transition-all active:scale-95",
+                active
+                    ? "bg-white/10 text-white"
+                    : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
+                className
+            )}
+        >
+            {children}
+        </button>
+    );
+}
 
 export default function TradingApp() {
     const [activeSymbol, setActiveSymbol] = useState(WATCHLIST[0]!);
@@ -105,36 +119,33 @@ export default function TradingApp() {
     const [drawingTool, setDrawingTool] = useState<DrawingToolType | null>(null);
     const [drawings, setDrawings] = useState<readonly AnyDrawing[]>([]);
     const [selectedDrawing, setSelectedDrawing] = useState<AnyDrawing | null>(null);
-    const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+    const [panelOpen, setPanelOpen] = useState(true);
     const [favorites, setFavorites] = useState<Set<string>>(new Set(["BTC/USD", "ETH/USD"]));
-    const [searchQuery, setSearchQuery] = useState("");
     const [showIndicators, setShowIndicators] = useState(false);
+    const [showDrawingTools, setShowDrawingTools] = useState(false);
     const chartRef = useRef<ChartRef>(null);
     const [chartDimensions, setChartDimensions] = useState({ width: 1200, height: 600 });
 
+    // Update dimensions when panel state changes
     useEffect(() => {
         const updateDimensions = () => {
-            const leftToolbar = 48;
-            const rightSidebar = rightSidebarOpen ? 280 : 0;
-            const topBar = 48;
-            const bottomBar = 32;
+            const panelWidth = panelOpen ? 260 : 0;
             setChartDimensions({
-                width: Math.max(400, window.innerWidth - leftToolbar - rightSidebar - 16),
-                height: Math.max(300, window.innerHeight - topBar - bottomBar - 16),
+                width: Math.max(400, window.innerWidth - panelWidth),
+                height: Math.max(300, window.innerHeight),
             });
         };
         updateDimensions();
         window.addEventListener("resize", updateDimensions);
         return () => window.removeEventListener("resize", updateDimensions);
-    }, [rightSidebarOpen]);
+    }, [panelOpen]);
 
     useEffect(() => {
         setCandles(generateCandles(200, activeSymbol.price, activeSymbol.symbol));
     }, [activeSymbol]);
 
     const handleExport = useCallback(() => {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        chartRef.current?.downloadPNG(`${activeSymbol.symbol}-${timestamp}.png`);
+        chartRef.current?.downloadPNG(`${activeSymbol.symbol}.png`);
     }, [activeSymbol.symbol]);
 
     const handleDrawingChange = useCallback((newDrawings: readonly AnyDrawing[]) => {
@@ -148,16 +159,7 @@ export default function TradingApp() {
     const handleClearDrawings = useCallback(() => {
         chartRef.current?.clearAllDrawings();
         setDrawings([]);
-        setSelectedDrawing(null);
     }, []);
-
-    const toggleFavorite = (symbol: string) => {
-        setFavorites(prev => {
-            const next = new Set(prev);
-            next.has(symbol) ? next.delete(symbol) : next.add(symbol);
-            return next;
-        });
-    };
 
     const toggleIndicator = (index: number) => {
         setIndicators(prev => prev.map((ind, i) =>
@@ -168,24 +170,19 @@ export default function TradingApp() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                if (drawingTool !== null) {
-                    chartRef.current?.cancelDrawing();
-                    setDrawingTool(null);
-                }
+                setDrawingTool(null);
+                setShowDrawingTools(false);
+                setShowIndicators(false);
+                chartRef.current?.cancelDrawing();
             }
-            if ((e.key === "Delete" || e.key === "Backspace") && selectedDrawing !== null) {
+            if ((e.key === "Delete" || e.key === "Backspace") && selectedDrawing) {
                 chartRef.current?.deleteSelectedDrawing();
                 setSelectedDrawing(null);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [drawingTool, selectedDrawing]);
-
-    const filteredWatchlist = WATCHLIST.filter(item =>
-        item.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    }, [selectedDrawing]);
 
     const lastCandle = candles[candles.length - 1];
     const priceChange = lastCandle && candles[0]
@@ -193,303 +190,201 @@ export default function TradingApp() {
         : 0;
 
     return (
-        <TooltipProvider delayDuration={100}>
-            <div className="flex h-screen w-screen overflow-hidden bg-[#0a0a0f] text-zinc-100">
-                {/* Left Toolbar */}
-                <div className="flex w-12 flex-col items-center border-r border-zinc-800/60 bg-[#0d0d12] py-2">
-                    {/* Drawing Tools */}
-                    <div className="flex flex-col gap-0.5">
-                        {DRAWING_TOOLS.map(({ tool, icon: Icon, label }) => (
-                            <Tooltip key={label}>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={() => setDrawingTool(tool)}
-                                        className={cn(
-                                            "flex h-9 w-9 items-center justify-center rounded transition-colors",
-                                            drawingTool === tool
-                                                ? "bg-blue-500/20 text-blue-400"
-                                                : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                                        )}
-                                    >
-                                        <Icon size={18} strokeWidth={1.5} />
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">{label}</TooltipContent>
-                            </Tooltip>
-                        ))}
+        <TooltipProvider delayDuration={200}>
+            <div className="relative h-screen w-screen overflow-hidden bg-[#08080c]">
+                {/* Full Screen Chart */}
+                <Chart
+                    ref={chartRef}
+                    data={candles}
+                    chartType={chartType}
+                    indicators={indicators}
+                    drawingTool={drawingTool}
+                    onDrawingChange={handleDrawingChange}
+                    onDrawingSelect={handleDrawingSelect}
+                    width={chartDimensions.width}
+                    height={chartDimensions.height}
+                />
+
+                {/* Top Left - Symbol & Price */}
+                <div className="absolute left-4 top-4 z-10">
+                    <div className="flex items-center gap-3">
+                        <span className="text-lg font-semibold text-white">{activeSymbol.symbol}</span>
+                        <span className="text-xs text-zinc-500">{timeframe}</span>
                     </div>
-
-                    <div className="my-3 h-px w-6 bg-zinc-800" />
-
-                    {/* Chart Types */}
-                    <div className="flex flex-col gap-0.5">
-                        {CHART_TYPES.map(({ type, icon: Icon, label }) => (
-                            <Tooltip key={type}>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={() => setChartType(type)}
-                                        className={cn(
-                                            "flex h-9 w-9 items-center justify-center rounded transition-colors",
-                                            chartType === type
-                                                ? "bg-blue-500/20 text-blue-400"
-                                                : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                                        )}
-                                    >
-                                        <Icon size={18} strokeWidth={1.5} />
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">{label}</TooltipContent>
-                            </Tooltip>
-                        ))}
+                    <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-2xl font-bold tabular-nums text-white">
+                            {lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className={cn(
+                            "text-sm font-medium tabular-nums",
+                            priceChange >= 0 ? "text-emerald-400" : "text-red-400"
+                        )}>
+                            {priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%
+                        </span>
                     </div>
-
-                    <div className="my-3 h-px w-6 bg-zinc-800" />
-
-                    {/* Actions */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                onClick={() => setShowIndicators(!showIndicators)}
-                                className={cn(
-                                    "flex h-9 w-9 items-center justify-center rounded transition-colors",
-                                    showIndicators || indicators.some(i => i.enabled)
-                                        ? "bg-purple-500/20 text-purple-400"
-                                        : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                                )}
-                            >
-                                <Activity size={18} strokeWidth={1.5} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">Indicators</TooltipContent>
-                    </Tooltip>
-
-                    {drawings.length > 0 && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    onClick={handleClearDrawings}
-                                    className="flex h-9 w-9 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
-                                >
-                                    <Trash2 size={18} strokeWidth={1.5} />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">Clear drawings</TooltipContent>
-                        </Tooltip>
-                    )}
-
-                    <div className="flex-1" />
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button className="flex h-9 w-9 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
-                                <Settings size={18} strokeWidth={1.5} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">Settings</TooltipContent>
-                    </Tooltip>
+                    <div className="mt-1 flex gap-3 text-[11px] text-zinc-500">
+                        <span>O <span className="text-zinc-400">{lastCandle?.open.toFixed(2)}</span></span>
+                        <span>H <span className="text-emerald-400/80">{lastCandle?.high.toFixed(2)}</span></span>
+                        <span>L <span className="text-red-400/80">{lastCandle?.low.toFixed(2)}</span></span>
+                        <span>C <span className="text-zinc-400">{lastCandle?.close.toFixed(2)}</span></span>
+                    </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="flex flex-1 flex-col overflow-hidden">
-                    {/* Top Bar */}
-                    <div className="flex h-12 items-center justify-between border-b border-zinc-800/60 bg-[#0d0d12] px-3">
-                        <div className="flex items-center gap-3">
-                            {/* Symbol Selector */}
-                            <button className="flex items-center gap-2 rounded-md bg-zinc-800/50 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-800">
-                                <span className="text-zinc-100">{activeSymbol.symbol}</span>
-                                <ChevronDown size={14} className="text-zinc-500" />
-                            </button>
-
-                            {/* Timeframe */}
-                            <div className="flex items-center gap-0.5 rounded-md bg-zinc-800/30 p-0.5">
-                                {TIMEFRAMES.map((tf) => (
-                                    <button
-                                        key={tf}
-                                        onClick={() => setTimeframe(tf)}
-                                        className={cn(
-                                            "rounded px-2 py-1 text-xs font-medium transition-colors",
-                                            timeframe === tf
-                                                ? "bg-zinc-700 text-zinc-100"
-                                                : "text-zinc-500 hover:text-zinc-300"
-                                        )}
+                {/* Left Floating Toolbar */}
+                <div className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5">
+                    {/* Drawing Tools */}
+                    <div className="flex flex-col gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                        {showDrawingTools ? (
+                            <>
+                                {DRAWING_TOOLS.map(({ tool, icon: Icon }) => (
+                                    <ToolButton
+                                        key={tool ?? "select"}
+                                        active={drawingTool === tool}
+                                        onClick={() => {
+                                            setDrawingTool(tool);
+                                            if (tool === null) setShowDrawingTools(false);
+                                        }}
                                     >
-                                        {tf}
-                                    </button>
+                                        <Icon size={16} strokeWidth={1.5} />
+                                    </ToolButton>
                                 ))}
-                            </div>
-
-                            <div className="h-5 w-px bg-zinc-800" />
-
-                            {/* OHLC */}
-                            <div className="flex items-center gap-3 text-xs">
-                                <span className="text-zinc-500">O <span className="text-zinc-300 tabular-nums">{lastCandle?.open.toFixed(2)}</span></span>
-                                <span className="text-zinc-500">H <span className="text-emerald-400 tabular-nums">{lastCandle?.high.toFixed(2)}</span></span>
-                                <span className="text-zinc-500">L <span className="text-red-400 tabular-nums">{lastCandle?.low.toFixed(2)}</span></span>
-                                <span className="text-zinc-500">C <span className={cn("tabular-nums", priceChange >= 0 ? "text-emerald-400" : "text-red-400")}>{lastCandle?.close.toFixed(2)}</span></span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={handleExport}
-                                        className="flex h-8 w-8 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-                                    >
-                                        <Camera size={16} strokeWidth={1.5} />
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent>Screenshot</TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button className="flex h-8 w-8 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
-                                        <Maximize2 size={16} strokeWidth={1.5} />
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent>Fullscreen</TooltipContent>
-                            </Tooltip>
-
-                            <div className="h-5 w-px bg-zinc-800" />
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-                                        className="flex h-8 w-8 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-                                    >
-                                        {rightSidebarOpen ? <PanelRightClose size={16} strokeWidth={1.5} /> : <PanelRightOpen size={16} strokeWidth={1.5} />}
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent>{rightSidebarOpen ? "Hide panel" : "Show panel"}</TooltipContent>
-                            </Tooltip>
-                        </div>
-                    </div>
-
-                    {/* Chart Area */}
-                    <div className="relative flex-1 overflow-hidden bg-[#0a0a0f]">
-                        <Chart
-                            ref={chartRef}
-                            data={candles}
-                            chartType={chartType}
-                            indicators={indicators}
-                            drawingTool={drawingTool}
-                            onDrawingChange={handleDrawingChange}
-                            onDrawingSelect={handleDrawingSelect}
-                            width={chartDimensions.width}
-                            height={chartDimensions.height}
-                        />
-
-                        {/* Indicators Panel (Floating) */}
-                        {showIndicators && (
-                            <div className="absolute left-4 top-4 z-20 w-56 rounded-lg border border-zinc-800 bg-[#0f0f14]/95 p-3 shadow-xl backdrop-blur-sm">
-                                <div className="mb-2 flex items-center justify-between">
-                                    <span className="text-sm font-medium">Indicators</span>
-                                    <button
-                                        onClick={() => setShowIndicators(false)}
-                                        className="text-zinc-500 hover:text-zinc-300"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                <div className="space-y-1">
-                                    {indicators.map((ind, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => toggleIndicator(idx)}
-                                            className={cn(
-                                                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors",
-                                                ind.enabled
-                                                    ? "bg-zinc-800 text-zinc-100"
-                                                    : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
-                                            )}
-                                        >
-                                            <Circle
-                                                size={10}
-                                                fill={ind.enabled ? ind.color : "transparent"}
-                                                stroke={ind.color}
-                                                strokeWidth={2}
-                                            />
-                                            <span>{ind.type.toUpperCase()}({ind.period})</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                {drawings.length > 0 && (
+                                    <ToolButton onClick={handleClearDrawings} className="text-red-400/60 hover:text-red-400">
+                                        <Trash2 size={16} strokeWidth={1.5} />
+                                    </ToolButton>
+                                )}
+                            </>
+                        ) : (
+                            <ToolButton onClick={() => setShowDrawingTools(true)} active={drawingTool !== null}>
+                                <PenLine size={16} strokeWidth={1.5} />
+                            </ToolButton>
                         )}
                     </div>
 
-                    {/* Bottom Status */}
-                    <div className="flex h-8 items-center justify-between border-t border-zinc-800/60 bg-[#0d0d12] px-3 text-[11px] text-zinc-500">
-                        <div className="flex items-center gap-4">
-                            <span className="flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                Live
-                            </span>
-                            <span>Vol: <span className="text-zinc-400 tabular-nums">{((lastCandle?.volume ?? 0) / 1000000).toFixed(2)}M</span></span>
+                    {/* Chart Types */}
+                    <div className="flex flex-col gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                        {CHART_TYPES.map(({ type, icon: Icon }) => (
+                            <ToolButton key={type} active={chartType === type} onClick={() => setChartType(type)}>
+                                <Icon size={16} strokeWidth={1.5} />
+                            </ToolButton>
+                        ))}
+                    </div>
+
+                    {/* Indicators */}
+                    <div className="relative">
+                        <div className="rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                            <ToolButton
+                                active={showIndicators || indicators.some(i => i.enabled)}
+                                onClick={() => setShowIndicators(!showIndicators)}
+                            >
+                                <Activity size={16} strokeWidth={1.5} />
+                            </ToolButton>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center gap-1">
-                                <Clock size={11} />
-                                {new Date().toLocaleTimeString()}
-                            </span>
-                        </div>
+                        {showIndicators && (
+                            <div className="absolute left-full top-0 ml-2 w-40 rounded-xl border border-white/5 bg-zinc-900/95 p-2 shadow-2xl backdrop-blur-xl">
+                                {indicators.map((ind, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => toggleIndicator(idx)}
+                                        className={cn(
+                                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors",
+                                            ind.enabled ? "bg-white/10 text-white" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                                        )}
+                                    >
+                                        <Circle size={8} fill={ind.enabled ? ind.color : "transparent"} stroke={ind.color} strokeWidth={2} />
+                                        {ind.type.toUpperCase()}({ind.period})
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Sidebar */}
-                <div className={cn(
-                    "flex flex-col border-l border-zinc-800/60 bg-[#0d0d12] transition-all duration-200",
-                    rightSidebarOpen ? "w-[280px]" : "w-0 overflow-hidden"
-                )}>
-                    {/* Symbol Info */}
-                    <div className="border-b border-zinc-800/60 p-4">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <div className="text-lg font-semibold">{activeSymbol.symbol}</div>
-                                <div className="text-xs text-zinc-500">{activeSymbol.name}</div>
-                            </div>
+                {/* Top Center - Timeframes */}
+                <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2">
+                    <div className="flex gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1 shadow-2xl backdrop-blur-xl">
+                        {TIMEFRAMES.map((tf) => (
                             <button
-                                onClick={() => toggleFavorite(activeSymbol.symbol)}
+                                key={tf}
+                                onClick={() => setTimeframe(tf)}
                                 className={cn(
-                                    "transition-colors",
-                                    favorites.has(activeSymbol.symbol) ? "text-yellow-500" : "text-zinc-600 hover:text-zinc-400"
+                                    "rounded-xl px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
+                                    timeframe === tf
+                                        ? "bg-white/10 text-white"
+                                        : "text-zinc-500 hover:text-zinc-300"
                                 )}
                             >
-                                <Star size={16} fill={favorites.has(activeSymbol.symbol) ? "currentColor" : "none"} />
+                                {tf}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Top Right - Actions */}
+                <div className="absolute right-4 top-4 z-10 flex items-center gap-1.5">
+                    <div className="flex gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <ToolButton onClick={handleExport}>
+                                    <Camera size={16} strokeWidth={1.5} />
+                                </ToolButton>
+                            </TooltipTrigger>
+                            <TooltipContent>Screenshot</TooltipContent>
+                        </Tooltip>
+                        <ToolButton>
+                            <Maximize2 size={16} strokeWidth={1.5} />
+                        </ToolButton>
+                        <ToolButton active={panelOpen} onClick={() => setPanelOpen(!panelOpen)}>
+                            <PanelRight size={16} strokeWidth={1.5} />
+                        </ToolButton>
+                    </div>
+                </div>
+
+                {/* Right Panel */}
+                <div className={cn(
+                    "absolute right-0 top-0 z-10 flex h-full flex-col border-l border-white/5 bg-[#0c0c10]/95 backdrop-blur-xl transition-all duration-300",
+                    panelOpen ? "w-[260px] translate-x-0" : "w-0 translate-x-full overflow-hidden"
+                )}>
+                    {/* Symbol Header */}
+                    <div className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="font-semibold text-white">{activeSymbol.symbol}</div>
+                                <div className="text-[11px] text-zinc-500">{activeSymbol.name}</div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setFavorites(prev => {
+                                        const next = new Set(prev);
+                                        next.has(activeSymbol.symbol) ? next.delete(activeSymbol.symbol) : next.add(activeSymbol.symbol);
+                                        return next;
+                                    });
+                                }}
+                                className={favorites.has(activeSymbol.symbol) ? "text-yellow-500" : "text-zinc-600"}
+                            >
+                                <Star size={14} fill={favorites.has(activeSymbol.symbol) ? "currentColor" : "none"} />
                             </button>
                         </div>
-                        <div className="mt-3">
-                            <div className="text-2xl font-semibold tabular-nums">
-                                ${lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="mt-2">
+                            <div className="text-xl font-bold tabular-nums text-white">
+                                ${lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </div>
-                            <div className={cn(
-                                "mt-0.5 flex items-center gap-1 text-sm",
-                                priceChange >= 0 ? "text-emerald-400" : "text-red-400"
-                            )}>
-                                {priceChange >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                            <div className={cn("flex items-center gap-1 text-sm", priceChange >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                {priceChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                                 <span className="tabular-nums">{priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Performance */}
-                    <div className="border-b border-zinc-800/60 p-4">
-                        <div className="mb-2 text-xs font-medium text-zinc-500">Performance</div>
-                        <div className="grid grid-cols-4 gap-2">
-                            {[
-                                { label: "1D", value: 1.23 },
-                                { label: "1W", value: -2.45 },
-                                { label: "1M", value: 5.67 },
-                                { label: "YTD", value: 12.34 },
-                            ].map(({ label, value }) => (
-                                <div key={label} className="rounded bg-zinc-800/30 p-2 text-center">
-                                    <div className="text-[10px] text-zinc-500">{label}</div>
-                                    <div className={cn(
-                                        "text-xs font-medium tabular-nums",
-                                        value >= 0 ? "text-emerald-400" : "text-red-400"
-                                    )}>
-                                        {value >= 0 ? "+" : ""}{value.toFixed(1)}%
+                    <div className="border-t border-white/5 p-4">
+                        <div className="mb-2 text-[11px] font-medium text-zinc-500">Performance</div>
+                        <div className="grid grid-cols-4 gap-1.5">
+                            {[{ l: "1D", v: 1.2 }, { l: "1W", v: -2.4 }, { l: "1M", v: 5.6 }, { l: "YTD", v: 12.3 }].map(({ l, v }) => (
+                                <div key={l} className="rounded-lg bg-white/5 p-2 text-center">
+                                    <div className="text-[9px] text-zinc-600">{l}</div>
+                                    <div className={cn("text-[11px] font-medium tabular-nums", v >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                        {v >= 0 ? "+" : ""}{v.toFixed(1)}%
                                     </div>
                                 </div>
                             ))}
@@ -497,65 +392,34 @@ export default function TradingApp() {
                     </div>
 
                     {/* Watchlist */}
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-zinc-800/60 px-4 py-2">
-                            <span className="text-xs font-medium text-zinc-400">Watchlist</span>
-                            <button className="text-zinc-500 hover:text-zinc-300">
-                                <Plus size={14} />
-                            </button>
+                    <div className="flex flex-1 flex-col overflow-hidden border-t border-white/5">
+                        <div className="flex items-center justify-between px-4 py-2">
+                            <span className="text-[11px] font-medium text-zinc-500">Watchlist</span>
                         </div>
-
-                        {/* Search */}
-                        <div className="p-3">
-                            <div className="relative">
-                                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="h-8 w-full rounded border border-zinc-800 bg-zinc-900/50 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-700"
-                                />
-                            </div>
-                        </div>
-
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto px-2 pb-2">
-                            {filteredWatchlist.map((item) => (
+                        <div className="flex-1 overflow-y-auto px-2">
+                            {WATCHLIST.map((item) => (
                                 <button
                                     key={item.symbol}
                                     onClick={() => setActiveSymbol(item)}
                                     className={cn(
-                                        "flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition-colors",
-                                        activeSymbol.symbol === item.symbol
-                                            ? "bg-zinc-800/80"
-                                            : "hover:bg-zinc-800/40"
+                                        "flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition-colors",
+                                        activeSymbol.symbol === item.symbol ? "bg-white/5" : "hover:bg-white/[0.02]"
                                     )}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <span
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleFavorite(item.symbol);
-                                            }}
-                                            className={cn(
-                                                "cursor-pointer transition-colors",
-                                                favorites.has(item.symbol) ? "text-yellow-500" : "text-zinc-700 hover:text-zinc-500"
-                                            )}
-                                        >
-                                            <Star size={12} fill={favorites.has(item.symbol) ? "currentColor" : "none"} />
-                                        </span>
-                                        <div>
-                                            <div className="text-sm font-medium">{item.symbol}</div>
+                                        <Star
+                                            size={10}
+                                            className={favorites.has(item.symbol) ? "text-yellow-500" : "text-zinc-700"}
+                                            fill={favorites.has(item.symbol) ? "currentColor" : "none"}
+                                        />
+                                        <div className="text-left">
+                                            <div className="text-sm font-medium text-zinc-200">{item.symbol}</div>
                                             <div className="text-[10px] text-zinc-600">{item.name}</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm tabular-nums">{item.price.toFixed(2)}</div>
-                                        <div className={cn(
-                                            "text-[10px] tabular-nums",
-                                            item.change >= 0 ? "text-emerald-400" : "text-red-400"
-                                        )}>
+                                        <div className="text-sm tabular-nums text-zinc-300">{item.price.toFixed(2)}</div>
+                                        <div className={cn("text-[10px] tabular-nums", item.change >= 0 ? "text-emerald-400" : "text-red-400")}>
                                             {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
                                         </div>
                                     </div>
@@ -563,6 +427,14 @@ export default function TradingApp() {
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Bottom Status */}
+                <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-[11px] text-zinc-600">
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Live
+                    </span>
                 </div>
             </div>
         </TooltipProvider>
