@@ -21,14 +21,12 @@ import {
     AreaChart,
     Camera,
     Maximize2,
-    Search,
     Star,
     Activity,
     Trash2,
     PanelRight,
     Circle,
-    X,
-    ChevronRight,
+    Menu,
 } from "lucide-react";
 
 function generateCandles(count: number, startPrice: number, symbol: string): Candle[] {
@@ -85,7 +83,6 @@ const PRESET_INDICATORS: IndicatorConfig[] = [
     { type: "bollinger", period: 20, color: "#06b6d4", enabled: false },
 ];
 
-// Floating toolbar button
 function ToolButton({ active, onClick, children, className }: {
     active?: boolean;
     onClick?: () => void;
@@ -96,10 +93,8 @@ function ToolButton({ active, onClick, children, className }: {
         <button
             onClick={onClick}
             className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-xl transition-all active:scale-95",
-                active
-                    ? "bg-white/10 text-white"
-                    : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
+                "flex h-7 w-7 items-center justify-center rounded-lg transition-all active:scale-95",
+                active ? "bg-[#1a1a1a] text-white" : "text-[#666] hover:text-[#999]",
                 className
             )}
         >
@@ -126,10 +121,9 @@ export default function TradingApp() {
     const chartRef = useRef<ChartRef>(null);
     const [chartDimensions, setChartDimensions] = useState({ width: 1200, height: 600 });
 
-    // Update dimensions when panel state changes
     useEffect(() => {
         const updateDimensions = () => {
-            const panelWidth = panelOpen ? 260 : 0;
+            const panelWidth = panelOpen ? 240 : 0;
             setChartDimensions({
                 width: Math.max(400, window.innerWidth - panelWidth),
                 height: Math.max(300, window.innerHeight),
@@ -191,7 +185,7 @@ export default function TradingApp() {
 
     return (
         <TooltipProvider delayDuration={200}>
-            <div className="relative h-screen w-screen overflow-hidden bg-[#08080c]">
+            <div className="relative h-screen w-screen overflow-hidden bg-[#0a0a0a]">
                 {/* Full Screen Chart */}
                 <Chart
                     ref={chartRef}
@@ -206,34 +200,27 @@ export default function TradingApp() {
                 />
 
                 {/* Top Left - Symbol & Price */}
-                <div className="absolute left-4 top-4 z-10">
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg font-semibold text-white">{activeSymbol.symbol}</span>
-                        <span className="text-xs text-zinc-500">{timeframe}</span>
+                <div className="absolute left-4 top-3 z-10">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{activeSymbol.symbol}</span>
+                        <span className="text-[10px] text-[#444]">{timeframe}</span>
                     </div>
-                    <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-2xl font-bold tabular-nums text-white">
+                    <div className="mt-0.5 flex items-baseline gap-2">
+                        <span className="text-xl font-light tabular-nums tracking-tight text-white">
                             {lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className={cn(
-                            "text-sm font-medium tabular-nums",
-                            priceChange >= 0 ? "text-emerald-400" : "text-red-400"
+                            "text-xs font-semibold tabular-nums",
+                            priceChange >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
                         )}>
                             {priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%
                         </span>
                     </div>
-                    <div className="mt-1 flex gap-3 text-[11px] text-zinc-500">
-                        <span>O <span className="text-zinc-400">{lastCandle?.open.toFixed(2)}</span></span>
-                        <span>H <span className="text-emerald-400/80">{lastCandle?.high.toFixed(2)}</span></span>
-                        <span>L <span className="text-red-400/80">{lastCandle?.low.toFixed(2)}</span></span>
-                        <span>C <span className="text-zinc-400">{lastCandle?.close.toFixed(2)}</span></span>
-                    </div>
                 </div>
 
                 {/* Left Floating Toolbar */}
-                <div className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5">
-                    {/* Drawing Tools */}
-                    <div className="flex flex-col gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                <div className="absolute left-2.5 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5">
+                    <div className="flex flex-col gap-0.5 rounded-xl bg-[#111] p-1">
                         {showDrawingTools ? (
                             <>
                                 {DRAWING_TOOLS.map(({ tool, icon: Icon }) => (
@@ -245,53 +232,51 @@ export default function TradingApp() {
                                             if (tool === null) setShowDrawingTools(false);
                                         }}
                                     >
-                                        <Icon size={16} strokeWidth={1.5} />
+                                        <Icon size={14} strokeWidth={1.5} />
                                     </ToolButton>
                                 ))}
                                 {drawings.length > 0 && (
-                                    <ToolButton onClick={handleClearDrawings} className="text-red-400/60 hover:text-red-400">
-                                        <Trash2 size={16} strokeWidth={1.5} />
+                                    <ToolButton onClick={handleClearDrawings} className="text-[#ef4444]/60 hover:text-[#ef4444]">
+                                        <Trash2 size={14} strokeWidth={1.5} />
                                     </ToolButton>
                                 )}
                             </>
                         ) : (
                             <ToolButton onClick={() => setShowDrawingTools(true)} active={drawingTool !== null}>
-                                <PenLine size={16} strokeWidth={1.5} />
+                                <PenLine size={14} strokeWidth={1.5} />
                             </ToolButton>
                         )}
                     </div>
 
-                    {/* Chart Types */}
-                    <div className="flex flex-col gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                    <div className="flex flex-col gap-0.5 rounded-xl bg-[#111] p-1">
                         {CHART_TYPES.map(({ type, icon: Icon }) => (
                             <ToolButton key={type} active={chartType === type} onClick={() => setChartType(type)}>
-                                <Icon size={16} strokeWidth={1.5} />
+                                <Icon size={14} strokeWidth={1.5} />
                             </ToolButton>
                         ))}
                     </div>
 
-                    {/* Indicators */}
                     <div className="relative">
-                        <div className="rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                        <div className="rounded-xl bg-[#111] p-1">
                             <ToolButton
                                 active={showIndicators || indicators.some(i => i.enabled)}
                                 onClick={() => setShowIndicators(!showIndicators)}
                             >
-                                <Activity size={16} strokeWidth={1.5} />
+                                <Activity size={14} strokeWidth={1.5} />
                             </ToolButton>
                         </div>
                         {showIndicators && (
-                            <div className="absolute left-full top-0 ml-2 w-40 rounded-xl border border-white/5 bg-zinc-900/95 p-2 shadow-2xl backdrop-blur-xl">
+                            <div className="absolute left-full top-0 ml-1.5 w-36 rounded-xl bg-[#111] p-1.5">
                                 {indicators.map((ind, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => toggleIndicator(idx)}
                                         className={cn(
-                                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors",
-                                            ind.enabled ? "bg-white/10 text-white" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] transition-colors",
+                                            ind.enabled ? "bg-[#1a1a1a] text-white" : "text-[#666] hover:text-[#999]"
                                         )}
                                     >
-                                        <Circle size={8} fill={ind.enabled ? ind.color : "transparent"} stroke={ind.color} strokeWidth={2} />
+                                        <Circle size={6} fill={ind.enabled ? ind.color : "transparent"} stroke={ind.color} strokeWidth={2} />
                                         {ind.type.toUpperCase()}({ind.period})
                                     </button>
                                 ))}
@@ -301,17 +286,15 @@ export default function TradingApp() {
                 </div>
 
                 {/* Top Center - Timeframes */}
-                <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2">
-                    <div className="flex gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1 shadow-2xl backdrop-blur-xl">
+                <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
+                    <div className="flex gap-0.5 rounded-xl bg-[#111] p-0.5">
                         {TIMEFRAMES.map((tf) => (
                             <button
                                 key={tf}
                                 onClick={() => setTimeframe(tf)}
                                 className={cn(
-                                    "rounded-xl px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-                                    timeframe === tf
-                                        ? "bg-white/10 text-white"
-                                        : "text-zinc-500 hover:text-zinc-300"
+                                    "rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all active:scale-95",
+                                    timeframe === tf ? "bg-[#1a1a1a] text-white" : "text-[#666] hover:text-[#999]"
                                 )}
                             >
                                 {tf}
@@ -321,36 +304,38 @@ export default function TradingApp() {
                 </div>
 
                 {/* Top Right - Actions */}
-                <div className="absolute right-4 top-4 z-10 flex items-center gap-1.5">
-                    <div className="flex gap-0.5 rounded-2xl border border-white/5 bg-zinc-900/80 p-1.5 shadow-2xl backdrop-blur-xl">
+                <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+                    <div className="flex gap-0.5 rounded-xl bg-[#111] p-1">
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <ToolButton onClick={handleExport}>
-                                    <Camera size={16} strokeWidth={1.5} />
+                                    <Camera size={14} strokeWidth={1.5} />
                                 </ToolButton>
                             </TooltipTrigger>
                             <TooltipContent>Screenshot</TooltipContent>
                         </Tooltip>
                         <ToolButton>
-                            <Maximize2 size={16} strokeWidth={1.5} />
+                            <Maximize2 size={14} strokeWidth={1.5} />
                         </ToolButton>
                         <ToolButton active={panelOpen} onClick={() => setPanelOpen(!panelOpen)}>
-                            <PanelRight size={16} strokeWidth={1.5} />
+                            <PanelRight size={14} strokeWidth={1.5} />
                         </ToolButton>
                     </div>
                 </div>
 
                 {/* Right Panel */}
                 <div className={cn(
-                    "absolute right-0 top-0 z-10 flex h-full flex-col border-l border-white/5 bg-[#0c0c10]/95 backdrop-blur-xl transition-all duration-300",
-                    panelOpen ? "w-[260px] translate-x-0" : "w-0 translate-x-full overflow-hidden"
+                    "absolute right-0 top-0 z-10 flex h-full flex-col gap-1.5 bg-transparent p-1.5 transition-all duration-300",
+                    panelOpen ? "w-[240px] translate-x-0" : "w-0 translate-x-full overflow-hidden p-0"
                 )}>
-                    {/* Symbol Header */}
-                    <div className="p-4">
+                    {/* Symbol Card */}
+                    <div className="rounded-xl bg-[#111] p-3">
                         <div className="flex items-center justify-between">
-                            <div>
-                                <div className="font-semibold text-white">{activeSymbol.symbol}</div>
-                                <div className="text-[11px] text-zinc-500">{activeSymbol.name}</div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-5 w-5 items-center justify-center rounded bg-[#ef4444] text-[8px] font-bold text-white">
+                                    {activeSymbol.symbol.slice(0, 2)}
+                                </div>
+                                <span className="text-xs font-bold text-white">{activeSymbol.symbol}</span>
                             </div>
                             <button
                                 onClick={() => {
@@ -360,81 +345,80 @@ export default function TradingApp() {
                                         return next;
                                     });
                                 }}
-                                className={favorites.has(activeSymbol.symbol) ? "text-yellow-500" : "text-zinc-600"}
+                                className={favorites.has(activeSymbol.symbol) ? "text-yellow-500" : "text-[#444]"}
                             >
-                                <Star size={14} fill={favorites.has(activeSymbol.symbol) ? "currentColor" : "none"} />
+                                <Star size={12} fill={favorites.has(activeSymbol.symbol) ? "currentColor" : "none"} />
                             </button>
                         </div>
-                        <div className="mt-2">
-                            <div className="text-xl font-bold tabular-nums text-white">
-                                ${lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                            <div className={cn("flex items-center gap-1 text-sm", priceChange >= 0 ? "text-emerald-400" : "text-red-400")}>
-                                {priceChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                                <span className="tabular-nums">{priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%</span>
-                            </div>
+                        <div className="mt-1 text-[9px] text-[#666]">{activeSymbol.name}</div>
+                        <div className="mt-2 text-[22px] font-light tabular-nums tracking-tight text-white">
+                            {lastCandle?.close.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            <span className="ml-1 text-[10px] text-[#444]">USD</span>
+                        </div>
+                        <div className={cn("mt-0.5 text-[11px] font-semibold tabular-nums", priceChange >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+                            {priceChange >= 0 ? "+" : ""}{(lastCandle?.close ?? 0 - (candles[0]?.open ?? 0)).toFixed(2)} ({priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%)
                         </div>
                     </div>
 
-                    {/* Performance */}
-                    <div className="border-t border-white/5 p-4">
-                        <div className="mb-2 text-[11px] font-medium text-zinc-500">Performance</div>
-                        <div className="grid grid-cols-4 gap-1.5">
-                            {[{ l: "1D", v: 1.2 }, { l: "1W", v: -2.4 }, { l: "1M", v: 5.6 }, { l: "YTD", v: 12.3 }].map(({ l, v }) => (
-                                <div key={l} className="rounded-lg bg-white/5 p-2 text-center">
-                                    <div className="text-[9px] text-zinc-600">{l}</div>
-                                    <div className={cn("text-[11px] font-medium tabular-nums", v >= 0 ? "text-emerald-400" : "text-red-400")}>
-                                        {v >= 0 ? "+" : ""}{v.toFixed(1)}%
+                    {/* Performance Card */}
+                    <div className="rounded-xl bg-[#111] p-3">
+                        <div className="mb-2 text-[10px] font-semibold text-white">Performance</div>
+                        <div className="grid grid-cols-3 gap-1">
+                            {[
+                                { l: "1W", v: -5.25 }, { l: "1M", v: -7.15 }, { l: "3M", v: -8.40 },
+                                { l: "6M", v: -5.14 }, { l: "YTD", v: -8.58 }, { l: "1Y", v: 3.89 },
+                            ].map(({ l, v }) => (
+                                <div key={l} className={cn(
+                                    "rounded-lg p-1.5 text-center",
+                                    v >= 0 ? "bg-[#22c55e]/10" : "bg-[#ef4444]/10"
+                                )}>
+                                    <div className={cn("text-[10px] font-bold tabular-nums", v >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+                                        {v >= 0 ? "+" : ""}{v.toFixed(2)}%
                                     </div>
+                                    <div className="text-[7px] uppercase text-[#444]">{l}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Watchlist */}
-                    <div className="flex flex-1 flex-col overflow-hidden border-t border-white/5">
-                        <div className="flex items-center justify-between px-4 py-2">
-                            <span className="text-[11px] font-medium text-zinc-500">Watchlist</span>
+                    {/* Watchlist Card */}
+                    <div className="flex flex-1 flex-col overflow-hidden rounded-xl bg-[#111]">
+                        <div className="flex items-center justify-between p-3 pb-2">
+                            <span className="text-[10px] font-semibold text-white">Watchlist</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto px-2">
+                        <div className="flex-1 overflow-y-auto px-1.5 pb-1.5">
+                            <div className="mb-1 px-1.5 text-[7px] font-semibold uppercase tracking-wide text-[#444]">Assets</div>
                             {WATCHLIST.map((item) => (
                                 <button
                                     key={item.symbol}
                                     onClick={() => setActiveSymbol(item)}
                                     className={cn(
-                                        "flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition-colors",
-                                        activeSymbol.symbol === item.symbol ? "bg-white/5" : "hover:bg-white/[0.02]"
+                                        "flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1.5 transition-colors",
+                                        activeSymbol.symbol === item.symbol ? "bg-[#1a1a1a]" : "hover:bg-[#161616]"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <Star
-                                            size={10}
-                                            className={favorites.has(item.symbol) ? "text-yellow-500" : "text-zinc-700"}
-                                            fill={favorites.has(item.symbol) ? "currentColor" : "none"}
-                                        />
-                                        <div className="text-left">
-                                            <div className="text-sm font-medium text-zinc-200">{item.symbol}</div>
-                                            <div className="text-[10px] text-zinc-600">{item.name}</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-sm tabular-nums text-zinc-300">{item.price.toFixed(2)}</div>
-                                        <div className={cn("text-[10px] tabular-nums", item.change >= 0 ? "text-emerald-400" : "text-red-400")}>
-                                            {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
-                                        </div>
-                                    </div>
+                                    <div className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        item.change >= 0 ? "bg-[#22c55e]" : "bg-[#ef4444]"
+                                    )} />
+                                    <span className="flex-1 text-left text-[10px] font-semibold text-white">{item.symbol}</span>
+                                    <span className="text-[10px] tabular-nums text-[#888]">{item.price.toFixed(2)}</span>
+                                    <span className={cn(
+                                        "w-12 text-right text-[9px] tabular-nums",
+                                        item.change >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
+                                    )}>
+                                        {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
+                                    </span>
                                 </button>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                {/* Bottom Status */}
-                <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-[11px] text-zinc-600">
-                    <span className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Live
-                    </span>
+                {/* Bottom Left - Status */}
+                <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 text-[9px] text-[#444]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                    Live
                 </div>
             </div>
         </TooltipProvider>
