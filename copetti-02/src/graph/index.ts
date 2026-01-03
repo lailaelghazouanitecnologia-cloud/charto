@@ -1,9 +1,12 @@
 /**
  * Graph Module
- * Re-exports core chart functionality.
+ * Provides complete chart functionality with streaming, chart types, and utilities.
  */
 
-// Core chart engine
+// ============================================================================
+// Core Chart Engine
+// ============================================================================
+
 export {
     ChartEngine,
     Chart,
@@ -15,10 +18,24 @@ export {
     type Viewport,
 } from "../core/chart.ts";
 
+// ============================================================================
 // Types
-export type { Candle, ChartConfig, ColorHex } from "../core/types.ts";
+// ============================================================================
 
+export type {
+    Candle,
+    ChartConfig,
+    ColorHex,
+    Pixel,
+    Point,
+} from "../core/types.ts";
+
+export { DEFAULT_CONFIG } from "../core/types.ts";
+
+// ============================================================================
 // Theme
+// ============================================================================
+
 export {
     DARK_THEME,
     LIGHT_THEME,
@@ -27,7 +44,27 @@ export {
     type ThemeType,
 } from "../core/theme.ts";
 
+// ============================================================================
+// Extended Chart Types
+// ============================================================================
+
+export {
+    drawBarChart,
+    drawHollowCandlesticks,
+    drawBaselineChart,
+    drawHeikinAshiCandlesticks,
+    calculateHeikinAshi,
+    chartTypeRenderers,
+    DEFAULT_BASELINE_CONFIG,
+    type ExtendedChartType,
+    type BaselineConfig,
+    type ChartTypeRenderer,
+} from "../core/chart-types.ts";
+
+// ============================================================================
 // Indicators
+// ============================================================================
+
 export {
     sma,
     ema,
@@ -37,15 +74,10 @@ export {
     type BollingerBands,
 } from "../core/indicators.ts";
 
-// Drawing tools
-export {
-    DrawingManager,
-    renderDrawings,
-    type DrawingToolType,
-    type AnyDrawing,
-} from "../core/drawing.ts";
+// ============================================================================
+// Pane System (RSI, MACD, etc.)
+// ============================================================================
 
-// Pane system
 export {
     PaneManager,
     calculateRSI,
@@ -55,9 +87,74 @@ export {
     type PaneIndicatorType,
 } from "../core/pane.ts";
 
+// ============================================================================
+// Drawing Tools
+// ============================================================================
+
+export {
+    DrawingManager,
+    renderDrawings,
+    type DrawingToolType,
+    type AnyDrawing,
+} from "../core/drawing.ts";
+
+// ============================================================================
+// Streaming & Real-time Data
+// ============================================================================
+
+export {
+    CandleAggregator,
+    DataStreamManager,
+    SimulatedDataStream,
+    createChartDataManager,
+    type StreamingState,
+    type StreamingEvent,
+    type StreamingCallback,
+    type AggregatorConfig,
+} from "../core/streaming.ts";
+
+// ============================================================================
 // Animation
+// ============================================================================
+
 export {
     ViewportAnimation,
     Easing,
     type EasingFunction,
 } from "../core/animation.ts";
+
+// ============================================================================
+// Scale
+// ============================================================================
+
+export {
+    LinearScale,
+    createScale,
+    createYScale,
+    createXScale,
+    type ScaleConfig,
+} from "../core/scale.ts";
+
+// ============================================================================
+// Canvas Utilities
+// ============================================================================
+
+export {
+    createCanvas,
+    Canvas,
+} from "../core/canvas.ts";
+
+// ============================================================================
+// React Hooks
+// ============================================================================
+
+export {
+    useChartData,
+    useSimulatedStream,
+    useCandleAggregator,
+    useIndicators,
+    useViewport,
+    usePriceFormatter,
+    useVolumeFormatter,
+    useTimeFormatter,
+} from "./hooks.ts";
